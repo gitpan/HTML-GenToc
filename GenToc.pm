@@ -881,7 +881,6 @@ package HTML::GenToc;
 
 require 5.005_03;
 use strict;
-use warnings;
 
 use vars qw(@ISA @EXPORT @EXPORT_OK $VERSION);
 BEGIN {
@@ -901,7 +900,7 @@ BEGIN {
 
 @EXPORT_OK = qw();
 
-$VERSION = '1.0';
+$VERSION = '1.1';
 
 #################################################################
 use constant GEN_TOC => "GEN_TOC";

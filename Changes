@@ -1,6 +1,9 @@
 Revision history for Perl module HTML::GenToc.
 ==============================================
 
+1.1  Wed 28th August 2002
+	- fixed bug with requirements which prevented working with perl 5.5
+
 1.0  Fri 24th May 2002
 	- cleaned up the tests (now uses Test::Simple and compares test files
 nicely)
