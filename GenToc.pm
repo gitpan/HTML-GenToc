@@ -127,7 +127,7 @@ BEGIN {
 
 @EXPORT_OK = qw();
 
-$VERSION = '2.02';
+$VERSION = '2.10';
 
 #################################################################
 
@@ -220,7 +220,21 @@ to the array of arguments.  In the arrayref form, use the special name
 "CLEAR" to clear the current array of input files, if you want to process
 a different file.
 
+(see --in_string also)
+
 (default:undefined)
+
+=item in_string
+
+in_string => $string
+
+Use the given string instead of reading in the content of the first
+infile.  Instead, the first infile is taken just to be the filename
+to use in referring to this content.  This is useful if one is using
+this module as part of other processing; the filename given could be
+the name of the final output file which hasn't been written yet.
+Note that it is still necessary to give at least one 'infile' name
+when using this option.
 
 =item notoc_match
 
@@ -336,6 +350,16 @@ toc_after options in the same call.
 
 See L<ToC Map File> for further information.
 
+=item to_string
+
+to_string => 1
+
+Return the output as a string.  This is where the modified HTML
+output goes to.  This does not override other methods of output,
+except in the case where the user hasn't specified any other method
+of output; then the default method (STDOUT) is overridden to just
+output to the string.
+
 =back 4
 
 =cut
@@ -400,6 +424,7 @@ sub args {
 		    || $arg eq 'textonly'
 		    || $arg eq 'toc_tag_replace'
 		    || $arg eq 'toc_only'
+		    || $arg eq 'to_string'
 		    || $arg eq 'useorg'
 		) {
 		    $self->{$arg} = 1;
@@ -413,6 +438,7 @@ sub args {
 		    || $arg eq 'notextonly'
 		    || $arg eq 'notoc_tag_replace'
 		    || $arg eq 'notoc_only'
+		    || $arg eq 'noto_string'
 		    || $arg eq 'nouseorg'
 		) {
 		    $arg =~ s/^no//;
@@ -481,6 +507,8 @@ sub args {
 
     $toc->generate_anchors(outfile=>"index2.html");
 
+    my $result_str = $toc->generate_anchors(to_string=>1);
+
 Generates anchors for the significant elements in the HTML documents.
 If one argument is given, it is assumed to be a reference to an array
 of arguments.  If more than one argument is given, it is assumed
@@ -521,17 +549,18 @@ sub generate_anchors ($;$) {
 
     %{$self->{__anchors}} = ();
     my @new_html;
-    my $not_to_stdout = 0;
+    my $file_needs_closing = 0;
+    my $to_string = $self->{to_string};
     my $outhandle = *STDOUT;
     if ($self->{outfile} && $self->{outfile} ne "-") {
 	open(FILEOUT, "> " . $self->{outfile})
 	    || die "Error: unable to open ", $self->{outfile}, ": $!\n";
 	$outhandle = *FILEOUT;
-	$not_to_stdout = 1;
+	$file_needs_closing = 1;
     }
     my $i = 0;
     foreach my $fn (@{$self->{infile}}) {
-	$self->{__file} = $fn;
+	$self->{__cur_file} = $fn;
 	my $infn = $fn;
 	my $bakfile = $fn . "." . $self->{bak};
 	if ($self->{useorg}
@@ -541,7 +570,25 @@ sub generate_anchors ($;$) {
 	    $infn = $bakfile;
 	}
 	@new_html = ();
-	push @new_html, $self->make_anchors($infn);
+	my $html_str = '';
+	# if we have an in_string, use it for the
+	# content of the first file
+	if ($self->{in_string} && $i == 0)
+	{
+	    $html_str = $self->{in_string};
+	}
+	else
+	{
+	    open (FILE, $infn) ||
+		die "Error: unable to open ", $infn, ": $!\n";
+	    {
+		local $/;   # slurp entire file
+		$html_str = <FILE>;
+		close (FILE);
+	    }
+	}
+	push @new_html, $self->make_anchors(filename=>$infn,
+	    input=>$html_str);
 	if ($self->{overwrite}) {
 	    if ($self->{bak}
 		&& !($self->{useorg} && -e $bakfile))
@@ -555,23 +602,35 @@ sub generate_anchors ($;$) {
 	    open(FILEOUT, "> $fn")
 		|| die "Error: unable to open ", $fn, ": $!\n";
 	    $outhandle = *FILEOUT;
-	    $not_to_stdout = 1;
+	    $file_needs_closing = 1;
 	    print STDERR "Overwriting Anchors to ", $fn, "\n"
 		unless $self->{quiet};
+	    print $outhandle @new_html;
 	}
 	elsif ($self->{outfile} && $self->{outfile} ne "-") {
 	    print STDERR "Writing Anchors to ", $self->{outfile}, "\n"
 		unless $self->{quiet};
+	    print $outhandle @new_html;
 	}
-	print $outhandle @new_html;
+	elsif ($self->{to_string} && !$self->{outfile})
+	{
+	    # don't print to anything
+	}
+	else
+	{
+	    print $outhandle @new_html;
+	}
 	$i++;
     }
     print STDERR "$i files processed.\n"
 	unless $self->{quiet};
-    if ($not_to_stdout) {
+    if ($file_needs_closing) {
 	close($outhandle);
     }
 
+    if ($self->{to_string}) {
+	return join('', @new_html);
+    }
     return 1;
 } # generate_anchors
 
@@ -579,6 +638,9 @@ sub generate_anchors ($;$) {
 
     $toc->generate_toc(title=>"Contents",
 	toc_file=>'toc.html');
+
+    my $result_str = $toc->generate_toc(title=>"The Contents",
+	to_string=>1);
 
 Generates a Table of Contents (ToC) for the significant elements in the
 HTML documents.  If one argument is given, it is assumed to be a
@@ -647,9 +709,9 @@ File to write the output to.  This is where the ToC goes.
 If you give '-' as the filename, then output will go to STDOUT.
 (default: STDOUT)
 
-=item toc_label
+=item toclabel
 
-toc_label => I<string>
+toclabel => I<string>
 
 HTML text that labels the ToC.  Always used.
 (default: "E<lt>H1E<gt>Table of ContentsE<lt>/H1E<gt>")
@@ -679,7 +741,7 @@ should be replaced, or if the ToC should be put after the tag.
 toc_only => 1
 
 Output only the Table of Contents, that is, the Table of Contents plus
-the toc_label.  If there is a --header or a --footer, these will also be
+the toclabel.  If there is a --header or a --footer, these will also be
 output.
 
 If --toc_only is false then if there is no --header, and --inline is not
@@ -725,7 +787,7 @@ sub generate_toc ($;$) {
     my $i = 0;
     my $bakfile;
     foreach my $fn (@{$self->{infile}}) {
-	$self->{__file} = $fn;
+	$self->{__cur_file} = $fn;
 	my $infn = $fn;
 	$bakfile = $fn . "." . $self->{bak};
 	if ($self->{useorg}
@@ -734,7 +796,25 @@ sub generate_toc ($;$) {
 	    # use the old backup files as source
 	    $infn = $bakfile;
 	}
-	push @toc, $self->make_toc($infn);
+	my $html_str = '';
+	# if we have an in_string, use it for the
+	# content of the first file
+	if ($self->{in_string} && $i == 0)
+	{
+	    $html_str = $self->{in_string};
+	}
+	else
+	{
+	    open (FILE, $infn) ||
+		die "Error: unable to open ", $infn, ": $!\n";
+	    {
+		local $/;   # slurp entire file
+		$html_str = <FILE>;
+		close (FILE);
+	    }
+	}
+	push @toc, $self->make_toc(input=>$html_str,
+	    filename=>$infn);
 	$i++;
     }
     print STDERR "$i files processed.\n"
@@ -773,13 +853,13 @@ sub generate_toc ($;$) {
     #
     #  Sent the full ToC to its final destination
     #
-    my $not_to_stdout = 0;
+    my $file_needs_closing = 0;
     my $tochandle = *STDOUT;
     if ($self->{toc_file} && $self->{toc_file} ne "-") {
 	open(TOCOUT, "> " . $self->{toc_file})
 	    || die "Error: unable to open ", $self->{toc_file}, ": $!\n";
 	$tochandle = *TOCOUT;
-	$not_to_stdout = 1;
+	$file_needs_closing = 1;
     }
     if ($self->{inline}) {
 	# either make a new output which is a modified copy
@@ -788,10 +868,15 @@ sub generate_toc ($;$) {
 	$bakfile = $first_file . "." . $self->{bak};
 	my @new_html;
 	if ($self->{useorg} && $self->{bak} && -e $bakfile) {
-	    @new_html = $self->put_toc_inline($toc_str, $bakfile);
+	    @new_html = $self->put_toc_inline(toc_str=>$toc_str,
+		filename=>$bakfile,
+		in_string=>$self->{in_string});
 	} else {
-	    @new_html = $self->put_toc_inline($toc_str, $first_file);
+	    @new_html = $self->put_toc_inline(toc_str=>$toc_str,
+		filename=>$first_file,
+		in_string=>$self->{in_string});
 	}
+	$toc_str = join "", @new_html;
 	if ($self->{overwrite}) {
 	    if ($self->{bak}
 		&& !($self->{useorg} && -e $bakfile))
@@ -805,26 +890,46 @@ sub generate_toc ($;$) {
 	    open(TOCOUT, "> $first_file")
 		|| die "Error: unable to open ", $first_file, ": $!\n";
 	    $tochandle = *TOCOUT;
-	    $not_to_stdout = 1;
+	    $file_needs_closing = 1;
 	    print STDERR "Overwriting ToC to ", $first_file, "\n"
 		unless $self->{quiet};
+	    print $tochandle $toc_str;
 	}
 	elsif ($self->{toc_file} && $self->{toc_file} ne "-") {
 	    print STDERR "Writing Inline ToC to ", $self->{toc_file}, "\n"
 		unless $self->{quiet};
+	    print $tochandle $toc_str;
 	}
-	print $tochandle @new_html;
+	elsif ($self->{to_string} && !$self->{toc_file})
+	{
+	    # just send to string, don't print anything
+	}
+	else
+	{
+	    print $tochandle $toc_str;
+	}
     } else {
 	if ($self->{toc_file} && $self->{toc_file} ne "-") {
 	    print STDERR "Writing ToC to ", $self->{toc_file}, "\n"
 		unless $self->{quiet};
+	    print $tochandle $toc_str;
 	}
-	print $tochandle $toc_str;
+	elsif ($self->{to_string} && !$self->{toc_file})
+	{
+	    # just send to string, don't print anything
+	}
+	else
+	{
+	    print $tochandle $toc_str;
+	}
     }
-    if ($not_to_stdout) {
+    if ($file_needs_closing) {
 	close($tochandle);
     }
 
+    if ($self->{to_string}) {
+	return $toc_str;
+    }
     return 1;
 } # generate_toc
 
@@ -883,7 +988,7 @@ sub init_our_data ($) {
     }
 
     # accumulation variables
-    $self->{__file} = "";	    # Current file being processed
+    $self->{__cur_file} = "";	    # Current file being processed
     $self->{__prevlevel} = 0; # Previous ToC entry level
     my %anchors = ();
     $self->{__anchors} = \%anchors;
@@ -1007,27 +1112,21 @@ sub make_anchor_name ($$) {
 #--------------------------------#
 # Name: make_anchors
 # Makes the anchors for one file
-# Args:
-#   $self
-#   $file
-sub make_anchors ($$) {
+sub make_anchors ($%) {
     my $self = shift;
-    my $infile = shift;
+    my %args = (
+	input=>'',
+	filename=>'',
+	@_
+    );
+    my $html_str = $args{input};
+    my $infile = $args{filename};
 
-    my $html_str = "";
     my @newhtml = ();
 
     print STDERR "Making anchors for $infile ...\n" unless $self->{quiet};
-    open (FILE, $infile) ||
-	die "Error: unable to open ", $infile, ": $!\n";
 
-    my $old_slash = $/;
-    undef $/;		# Slurps entire file
-    $html_str = <FILE>;
-    close (FILE);
-    $/ = $old_slash;
-
-    # parse the file
+    # parse the HTML
     my $hp = new HTML::SimpleParse();
     $hp->text($html_str);
     $hp->parse();
@@ -1156,30 +1255,24 @@ sub make_anchors ($$) {
 #--------------------------------#
 # Name: make_toc
 # Makes (a portion of) the ToC from one file
-# Args:
-#   $self
-#   $file
 # Returns:
 #   $toc_str
-sub make_toc ($$) {
+sub make_toc ($%) {
     my $self = shift;
-    my $infile = shift;
+    my %args = (
+	input=>'',
+	filename=>'',
+	@_
+    );
+    my $html_str = $args{input};
+    my $infile = $args{filename};
 
-    my $html_str = "";
     my $toc_str = "";
     my @toc = ();
 
     print STDERR "Making ToC from $infile ...\n" unless $self->{quiet};
-    open (FILE, $infile) ||
-	die "Error: unable to open ", $infile, ": $!\n";
 
-    my $old_slash = $/;
-    undef $/;		# Slurps entire file
-    $html_str = <FILE>;
-    close (FILE);
-    $/ = $old_slash;
-
-    # parse the file
+    # parse the HTML
     my $hp = new HTML::SimpleParse();
     $hp->text($html_str);
     $hp->parse();
@@ -1284,7 +1377,7 @@ sub make_toc ($$) {
 		    || $tok->{type} eq 'endtag')
 	    {	# Tag
 		if ($self->{debug}) {
-		    print STDERR "file = ", $self->{__file},
+		    print STDERR "file = ", $self->{__cur_file},
 			" tag = $tag, endtag = '$endtag",
 			"' tok-type = ", $tok->{type},
 			" tok-content = '", $tok->{content}, "'\n";
@@ -1348,7 +1441,7 @@ sub make_toc ($$) {
 	$tmp  = '';
 	$tmp .= $self->{entrysep}  if $noli && !$levelopen;
 	$tmp .= "\n<li>"  unless $noli && !$levelopen;
-	if ($self->{inline} and $self->{infile}->[0] eq $self->{__file})
+	if ($self->{inline} and $self->{infile}->[0] eq $self->{__cur_file})
 	{
 	    $tmp .= join('',
 			 qq|<a href="|,
@@ -1359,7 +1452,7 @@ sub make_toc ($$) {
 	{
 	    $tmp .= join('',
 			 qq|<a href="|,
-			 qq|$self->{__file}|,
+			 qq|$self->{__cur_file}|,
 			 !$is_title ? qq|#$name| : '',
 			 qq|">$content</a>|);
 	}
@@ -1380,24 +1473,35 @@ sub make_toc ($$) {
 # Args:
 #   $self
 #   $file
-sub put_toc_inline ($$$) {
+sub put_toc_inline ($) {
     my $self = shift;
-    my $toc_str = shift;
-    my $infile = shift;
+    my %args = (
+	toc_str=>'',
+	filename=>'',
+	in_string=>'',
+	@_
+    );
+    my $toc_str = $args{toc_str};
+    my $infile = $args{filename};
 
     my $html_str = "";
     my @newhtml = ();
 
     print STDERR "Putting ToC in place from $infile ...\n"
 	unless $self->{quiet};
-    open (FILE, $infile) ||
-	die "Error: unable to open ", $infile, ": $!\n";
+    if ($args{in_string}) # use input string, not file
+    {
+	$html_str = $args{in_string};
+    }
+    else
+    {
+	local $/;
+	open (FILE, $infile) ||
+	    die "Error: unable to open ", $infile, ": $!\n";
 
-    my $old_slash = $/;
-    undef $/;		# Slurps entire file
-    $html_str = <FILE>;
-    close (FILE);
-    $/ = $old_slash;
+	$html_str = <FILE>;
+	close (FILE);
+    }
 
     # parse the file
     my $hp = new HTML::SimpleParse();
@@ -1575,7 +1679,7 @@ the header file should contain for inlining the ToC.
 
 =back 4
 
-With the --toc_label option, the contents of the given string will be
+With the --toclabel option, the contents of the given string will be
 prepended before the generated ToC (but after any text taken from a
 --header file).
 
@@ -1604,7 +1708,7 @@ entries' list, the -toclabel option. Both options have default values.
 If you do not want HTML page tags to be supplied, and just want
 the ToC itself, then specify the --toc_only option.
 If there are no --header or --footer files, then this will simply
-output the contents of --toc_label and the ToC itself.
+output the contents of --toclabel and the ToC itself.
 
 =head2 Inlining the ToC
 
@@ -1631,8 +1735,8 @@ B<Example 1>
 
 This will put the generated ToC after the BODY tag of the first file.
 If the --header option is specified, then the contents of the specified
-file are inserted after the BODY tag.  If the --toc_label option is not
-empty, then the text specified by the --toc_label option is inserted.
+file are inserted after the BODY tag.  If the --toclabel option is not
+empty, then the text specified by the --toclabel option is inserted.
 Then the ToC is inserted, and finally, if the --footer option is
 specified, it inserts the footer.  Then the rest of the input file
 follows as it was before.
@@ -1646,7 +1750,7 @@ This will put the generated ToC after the first comment of the form
 <!--toc-->, and that comment will be replaced by the ToC
 (in the order
 --header
---toc_label
+--toclabel
 ToC
 --footer)
 followed by the rest of the input file.

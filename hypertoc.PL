@@ -821,7 +821,7 @@ this script is back here in this file.
 # Globals
 #
 use vars qw($VERSION);
-$VERSION = '2.02';
+$VERSION = '2.10';
 
 #################################################################
 # Includes

@@ -1,9 +1,10 @@
-HTML/GenToc version 2.02
+HTML/GenToc version 2.10
 ========================
 
 HTML::GenToc generates anchors and a table of contents for
 HTML documents.  Depending on the arguments, it will insert
-the information it generates, or output to a separate file or STDOUT.
+the information it generates, or output to a string, a separate file
+or STDOUT.
 While it defaults to taking H1 and H2 elements as the significant
 elements to put into the table of contents, any tag can be defined
 as a significant element.  Also, it doesn't matter if the input

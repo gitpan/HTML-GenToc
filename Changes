@@ -1,6 +1,12 @@
 Revision history for Perl module HTML::GenToc.
 ==============================================
 
+2.10 Tue 12th August 2003
+	- added --to_string and --in_string options to HTML::GenToc
+generate_anchors and generate_toc to enable using strings rather
+than files, so that one can use the module in perl scripts which
+are doing additional processing.
+
 2.02 Sat 15th February 2003
 	- removed heavily spammed email address from documentation.
 
