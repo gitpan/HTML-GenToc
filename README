@@ -1,0 +1,49 @@
+HTML/GenToc version 0.2
+=======================
+
+HTML::GenToc generates anchors and a table of contents for
+HTML documents.  Depending on the arguments, it will insert
+the information it generates, or output to a separate file or STDOUT.
+While it defaults to taking H1 and H2 elements as the significant
+elements to put into the table of contents, any tag can be defined
+as a significant element.  Also, it doesn't matter if the input
+HTML code is complete, pure HTML, one can input pseudo-html
+or page-fragments, which makes it suitable for using on templates
+and HTML meta-languages such as WML.
+
+INSTALLATION
+
+To install this module type the following:
+
+   perl Makefile.PL
+   make
+   make test
+   make install
+
+DEPENDENCIES
+
+This module requires these other modules and libraries:
+
+  Pod::Usage
+  AppConfig
+  HTML::SimpleParse
+
+COPYRIGHT AND LICENCE
+
+Copyright (C) 1994-1997  Earl Hood, ehood@medusa.acs.uci.edu
+Copyright (C) 2002 Kathryn Andersen, rubykat@katspace.com
+
+This program is free software; you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation; either version 2 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program; if not, write to the Free Software
+Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+

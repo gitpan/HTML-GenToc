@@ -6,7 +6,7 @@
 # Change 1..1 below to 1..last_test_to_print .
 # (It may become useful if the test is moved to ./t subdirectory.)
 
-BEGIN { $| = 1; print "1..6\n"; }
+BEGIN { $| = 1; print "1..8\n"; }
 END {print "not ok 1\n" unless $loaded;}
 use HTML::GenToc;
 $loaded = 1;
@@ -26,7 +26,7 @@ if ($toc) {
 }
 
 @args = ();
-push @args, "--file", "test.wml", "--outfile", "test2.wml";
+push @args, "--file", "test1.wml", "--outfile", "test2.wml";
 $result = $toc->generate_anchors(\@args);
 if ($result) {
     print "ok 3\n";
@@ -46,7 +46,7 @@ if ($result) {
 
 @args = ();
 push @args, "--file", "CLEAR",
-"--file", "test.html", "--outfile", "test2.html";
+"--file", "test1.html", "--outfile", "test2.html";
 $result = $toc->generate_anchors(\@args);
 if ($result) {
     print "ok 5\n";
@@ -64,7 +64,31 @@ if ($result) {
     print "ok 6\n";
 }
 
+@args = ();
+push @args, "--file", "CLEAR", "--bak", "", "--noinline", "--nooverwrite",
+"--file", "testb.wml", "--outfile", "testb1.wml",
+"--toc_entry", "H3=3", "--toc_end", "H3=/H3";
+$result = $toc->generate_anchors(\@args);
+if ($result) {
+    print "ok 7\n";
+} else {
+    print "ok 7\n";
+}
+
+@args = ();
+push @args, "--file", "CLEAR", "--outfile", "",
+"--file", "testb1.wml", "--toc_file", "testb2.wml";
+$result = $toc->generate_toc(\@args);
+if ($result) {
+    print "ok 8\n";
+} else {
+    print "ok 8\n";
+}
+
 # clean up
 unlink("test2.wml");
 unlink("test2.html");
 unlink("test2.html.org");
+unlink("testb1.wml");
+unlink("testb1.wml.org");
+unlink("testb2.wml");

@@ -2,7 +2,7 @@
 
 =head1 NAME
 
-HTML::GenToc - Generate a Table of Contents (ToC) for HTML documents.
+HTML::GenToc - Generate/insert anchors and a Table of Contents (ToC) for HTML documents.
 
 =head1 SYNOPSIS
 
@@ -39,7 +39,9 @@ HTML::GenToc - Generate a Table of Contents (ToC) for HTML documents.
 
 HTML::GenToc allows you to specify "significant elements" that will be
 hyperlinked to in a "Table of Contents" (ToC) for a given set of HTML
-documents.
+documents.  Also, it does not require said documents to be strict HTML;
+this makes it suitable for using with templates and meta-languages such
+as WML.
 
 Basically, the ToC generated is a multi-level level list containing
 links to the significant elements. HTML::GenToc inserts the links into the
@@ -837,7 +839,7 @@ BEGIN {
 
 @EXPORT_OK = qw();
 
-$VERSION = '0.1';
+$VERSION = '0.2';
 
 #################################################################
 use constant GEN_TOC => "GEN_TOC";
@@ -1030,6 +1032,9 @@ sub generate_toc ($;$) {
 	    push @toc, "</ol>\n";
 	} else {
 	    push @toc, "</ul>\n";
+	}
+	if ($i > 1) {
+	    push @toc, "</li>";
 	}
     }
 
@@ -1418,7 +1423,6 @@ sub make_anchors ($$) {
     my $tag;
     my $endtag;
     my $level = 0;
-    my $levelopen;
     my $tmp;
     my $content;
     my $adone = 0;
@@ -1676,6 +1680,7 @@ sub make_toc ($$) {
 	##
 	my $i;
 	if ($level < $self->{__prevlevel}) {
+	    # close open levels
 	    for ($i=$level; $i < $self->{__prevlevel}; $i++) {
 		if ($self->ol() && $i == 1) {
 		    $toc_str .= "\n</ol>";
@@ -1683,13 +1688,22 @@ sub make_toc ($$) {
 		else {
 		    $toc_str .= "\n</ul>";
 		}
+		if ($i > 0) {
+		    $toc_str .= "</li>";
+		}
 	    }
 	} elsif ($level > $self->{__prevlevel}) {
+	    # open closed levels
 	    for ($i=$level; $i > $self->{__prevlevel}; $i--) {
-		if ($self->ol() && $i == 1) {
+		if ($self->ol() && $i == $level
+		    && $self->{__prevlevel} == 0) {
 		    $toc_str .= "\n<ol>";
 		}
 		else {
+		    if (!($self->{__prevlevel} == 0
+			&& $i == $level)) {
+			$toc_str .= "<li style=\"list-style: none;\">";
+		    }
 		    $toc_str .= "\n<ul>";
 		}
 	    }
@@ -1707,6 +1721,7 @@ sub make_toc ($$) {
 		     qq|$self->{__file}|,
 		     !$is_title ? qq|#$name| : '',
 		     qq|">$content</a>|);
+	$tmp .= "</li>\n"  unless $noli && !$levelopen;
 	$toc_str .= $tmp;
 
 	$name = 'NOTOC';

@@ -1,5 +1,11 @@
 Revision history for Perl module HTML::GenToc.
 
+0.2  Sat Feb 23 2002
+	- added README file
+	- updated documentation
+	- made the generated ToC more XHTML compliant
+	- changed tests slightly
+
 0.1  Mon 28th Jan 2002
 	- conversion of htmltoc to a module
 	- use HTML::SimpleParse to parse the HTML

@@ -1,7 +1,9 @@
 Changes
 MANIFEST
 Makefile.PL
+README
 GenToc.pm
 test.pl
-test.wml
-test.html
+test1.wml
+test1.html
+testb.wml
