@@ -5,5 +5,11 @@ README
 GenToc.pm
 test.pl
 test1.wml
-test1.html
-testb.wml
+good_test1_anch.wml
+good_test1_toc.html
+test2.html
+good_test2_anch.html
+good_test2_toc.html
+test3.wml
+good_test3_anch.wml
+good_test3_toc.html

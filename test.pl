@@ -3,93 +3,149 @@
 
 ######################### We start with some black magic to print on failure.
 
-# Change 1..1 below to 1..last_test_to_print .
-# (It may become useful if the test is moved to ./t subdirectory.)
-
-BEGIN { $| = 1; print "1..8\n"; }
-END {print "not ok 1\n" unless $loaded;}
+use Test::Simple tests => 15;
 use HTML::GenToc;
-$loaded = 1;
-print "ok 1\n";
+ok(1); # If we made it this far, we're ok.
 
-######################### End of black magic.
+#########################
 
-# Insert your test code below (better if it prints "ok 13"
-# (correspondingly "not ok 13") depending on the success of chunk 13
-# of the test code):
+# compare two files
+sub compare {
+    my $file1 = shift;
+    my $file2 = shift;
+
+    open(F1, $file1) || return 0;
+    open(F2, $file2) || return 0;
+
+    my $res = 1;
+    my $count = 0;
+    while (<F1>)
+    {
+	$count++;
+	my $comp1 = $_;
+	# remove newline/carriage return (in case these aren't both Unix)
+	$comp1 =~ s/\n//;
+	$comp1 =~ s/\r//;
+
+	my $comp2 = <F2>;
+
+	# check if F2 has less lines than F1
+	if (!defined $comp2)
+	{
+	    print "error - line $count does not exist in $file2\n  $file1 : $comp1\n";
+	    close(F1);
+	    close(F2);
+	    return 0;
+	}
+
+	# remove newline/carriage return
+	$comp2 =~ s/\n//;
+	$comp2 =~ s/\r//;
+	if ($comp1 ne $comp2)
+	{
+	    print "error - line $count not equal\n  $file1 : $comp1\n  $file2 : $comp2\n";
+	    close(F1);
+	    close(F2);
+	    return 0;
+	}
+    }
+    close(F1);
+
+    # check if F2 has more lines than F1
+    if (defined($comp2 = <F2>))
+    {
+	$comp2 =~ s/\n//;
+	$comp2 =~ s/\r//;
+	print "error - extra line in $file2 : '$comp2'\n";
+	$res = 0;
+    }
+
+    close(F2);
+
+    return $res;
+}
+
+# Insert your test code below, the Test module is use()ed here so read
+# its man page ( perldoc Test ) for help writing this test script.
 
 $toc = new HTML::GenToc();
-if ($toc) {
-    print "ok 2\n";
-} else {
-    print "ok 2\n";
-}
+ok( defined $toc, 'new() returned something' );
+ok( $toc->isa('HTML::GenToc'), "  and it's the right class" );
 
 @args = ();
-push @args, "--file", "test1.wml", "--outfile", "test2.wml";
+push @args, '--quiet', '--file', 'test1.wml', '--outfile', 'test1_anch.wml';
 $result = $toc->generate_anchors(\@args);
-if ($result) {
-    print "ok 3\n";
-} else {
-    print "ok 3\n";
-}
+ok($result, 'generated anchors from test1.wml');
+
+# compare the files
+$result = compare('test1_anch.wml', 'good_test1_anch.wml');
+ok($result, 'test1_anch.wml matches good output exactly');
 
 @args = ();
-push @args, "--file", "CLEAR", "--outfile", "",
-"--file", "test2.wml";
+push @args, '--file', 'CLEAR', '--outfile', '',
+'--file', 'test1_anch.wml', '--toc_file', 'test1_toc.html';
 $result = $toc->generate_toc(\@args);
-if ($result) {
-    print "ok 4\n";
-} else {
-    print "ok 4\n";
-}
+ok($result, 'generated toc from test1_anch.wml');
+
+# compare the files
+$result = compare('test1_toc.html', 'good_test1_toc.html');
+ok($result, 'test1_toc.html matches good output exactly');
+
+# clean up test1
+unlink('test1_anch.wml');
+unlink('test1_toc.html');
 
 @args = ();
-push @args, "--file", "CLEAR",
-"--file", "test1.html", "--outfile", "test2.html";
+push @args, '--file', 'CLEAR', '--toc_file', '',
+'--file', 'test2.html', '--outfile', 'test2_anch.html';
 $result = $toc->generate_anchors(\@args);
-if ($result) {
-    print "ok 5\n";
-} else {
-    print "ok 5\n";
-}
+ok($result, 'generated anchors from test2.html');
+
+# compare the files
+$result = compare('test2_anch.html', 'good_test2_anch.html');
+ok($result, 'test2_anch.html matches good output exactly');
 
 @args = ();
-push @args, "--file", "CLEAR", "--outfile", "",
-"--file", "test2.html", "--inline", "--overwrite";
+push @args, '--file', 'CLEAR', '--outfile', '',
+'--file', 'test2_anch.html', '--inline', '--overwrite';
 $result = $toc->generate_toc(\@args);
-if ($result) {
-    print "ok 6\n";
-} else {
-    print "ok 6\n";
-}
+ok($result, 'generated toc inline test2_anch.html');
 
-@args = ();
-push @args, "--file", "CLEAR", "--bak", "", "--noinline", "--nooverwrite",
-"--file", "testb.wml", "--outfile", "testb1.wml";
-push @args, "--toc_entry", "H3=3";
-push @args, "--toc_end", "H3=/H3";
-$result = $toc->generate_anchors(\@args);
-if ($result) {
-    print "ok 7\n";
-} else {
-    print "ok 7\n";
-}
-
-@args = ();
-push @args, "--file", "CLEAR", "--outfile", "",
-"--file", "testb1.wml", "--toc_file", "testb2.wml";
-$result = $toc->generate_toc(\@args);
-if ($result) {
-    print "ok 8\n";
-} else {
-    print "ok 8\n";
-}
+# compare the files
+$result = compare('test2_anch.html', 'good_test2_toc.html');
+ok($result, 'test2_anch.html matches good output exactly');
 
 # clean up
-unlink("test2.wml");
-unlink("test2.html");
-unlink("test2.html.org");
-unlink("testb1.wml");
-unlink("testb1.wml.org");
-unlink("testb2.wml");
+unlink('test2_anch.html');
+unlink('test2_anch.html.org');
+
+@args = ();
+push @args, '--file', 'CLEAR', '--bak', '', '--noinline', '--nooverwrite',
+'--file', 'test3.wml', '--outfile', 'test3_anch.wml';
+push @args, '--toc_entry', 'H3=3';
+push @args, '--toc_end', 'H3=/H3';
+$result = $toc->generate_anchors(\@args);
+ok($result, 'generated anchors from test3.wml');
+
+# compare the files
+$result = compare('test3_anch.wml', 'good_test3_anch.wml');
+ok($result, 'test3_anch.wml matches good output exactly');
+
+@args = ();
+push @args, '--file', 'CLEAR', '--outfile', '',
+'--file', 'test3_anch.wml', '--toc_file', 'test3_toc.html';
+$result = $toc->generate_toc(\@args);
+ok($result, 'generated toc from test3_anch.wml');
+
+# compare the files
+$result = compare('test3_toc.html', 'good_test3_toc.html');
+ok($result, 'test3_toc.html matches good output exactly');
+
+# clean up
+unlink('test3_anch.wml');
+unlink('test3_toc.html');
+
+# misc stuff
+#@args = ();
+#push @args, '--unknown_option';
+#$result = $toc->args(\@args);

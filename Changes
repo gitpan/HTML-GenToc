@@ -1,4 +1,11 @@
 Revision history for Perl module HTML::GenToc.
+==============================================
+
+1.0  Fri 24th May 2002
+	- cleaned up the tests (now uses Test::Simple and compares test files
+nicely)
+	- rearranged the documentation
+	- added --help and --manpage options
 
 0.3  Fri 1st Mar 2002
 	- added --notoc_match option to suppress ToC for individual tags

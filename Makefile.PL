@@ -7,5 +7,11 @@ WriteMakefile(
     'PREREQ_PM'		=> {'HTML::SimpleParse' => 0.10,
 		'AppConfig' => 1.52,
 		'Pod::Usage' => 0,
+		'Data::Dumper' => 0,
+		'Test::Simple' => 0,
 	}, # e.g., Module::Name => 1.1
+    ($] >= 5.005 ?    ## Add these new keywords supported since 5.005
+      (ABSTRACT_FROM => 'GenToc.pm', # retrieve abstract from module
+       AUTHOR     => 'Kathryn Andersen <rubykat@katspace.com>') : ()),
+
 );

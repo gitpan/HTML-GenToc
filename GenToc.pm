@@ -78,7 +78,7 @@ use HTML::GenToc as a filter, outputing the result to another file,
 or one can overwrite the original file, with the original backed
 up with a suffix (default: "org") appended to the filename.
 
-=head2 A Note about Arguments
+=head2 Methods
 
 Because this is a subclass of AppConfig, one can use all the power of
 AppConfig for defining and parsing options/arguments.
@@ -88,19 +88,9 @@ can be set on any method (though some may not make sense).  Methods
 expect a reference to an array (which will then be processed as if it were
 a command-line, which makes this very easy to use from scripts).
 
-Options can start with '--' or '-'.  If it is a yes/no option, that is the
-only part of the option (and such an option can be prefaced with "no" to
-negate it).  If the option takes a value, then the list must be
-("--option", "value").
+See L<A Note about Options> for more information.
 
-Order does matter.  For options which are yes/no options, a later
-argument overrides an earlier one.  For arguments which are single values,
-a later value replaces an earlier one.  For arguments which are
-cumulative, a later argument is added on to the list.  For such arguments,
-if you want to clear the old value and start afresh, give it the
-special value of CLEAR.
-
-=head2 Methods
+See L<OPTIONS> for the options for all these methods.
 
 =over 4
 
@@ -118,10 +108,85 @@ Creates a new HTML::GenToc object.
 Optionally takes one argument, a reference to an array of arguments, which
 will be used in invocations of other methods.
 
-B<Common Arguments:>
+See L<Common Options> for arguments to this method.
 
-The following arguments apply to both the I<generate_anchors> and
-I<generate_toc> methods.
+=item *
+generate_anchors
+
+    $toc->generate_anchors(["--outfile", "index2.html",
+        ]);
+
+Generates anchors for the significant elements in the HTML documents.
+Optionally takes one argument, a reference to an array of arguments, which
+will be used to influence this method's behavour (and if arguments have
+already been set earlier, they also will be taken into account).
+
+See L<Common Options> and L<Generate Anchors Options>
+for arguments to this method.
+
+=item *
+generate_toc
+
+    $toc->generate_toc(\@args);
+
+Generates a Table of Contents (ToC) for the significant elements in the
+HTML documents.
+Optionally takes one argument, a reference to an array of arguments, which
+will be used to influence this method's behavour (and if arguments have
+already been set earlier, they also will be taken into account).
+
+See L<Common Options> and L<Generate TOC Options>
+for arguments to this method.
+
+=item *
+args
+
+    $toc->args(\@args);
+
+    $toc->args(["--file", "CLEAR"]);
+
+Updates the current arguments/options of the HTML::GenToc object.
+Takes a reference to an array of arguments, which will be used
+in invocations of other methods.
+
+=item *
+do_help
+
+    $toc->do_help();
+
+Output the default help or manpage message (and exit) if the --help or
+--manpage options are set.  This is explicitly called inside
+I<generate_anchors> and I<generate_toc>, so you only need to call this
+if you wish to trigger the help action without having called those
+methods.
+
+If --manpage is true, this displays all the PoD documentation
+of the calling program.  Otherwise, if --help is true, then this
+displays the SYNOPSIS information from the PoD documentation
+of the calling program.
+
+=back 4
+
+=head1 OPTIONS
+
+=head2 A Note about Options
+
+Options can start with '--' or '-'.  If it is a yes/no option, that is the
+only part of the option (and such an option can be prefaced with "no" to
+negate it).  If the option takes a value, then the list must be
+("--option", "value").
+
+Order does matter.  For options which are yes/no options, a later
+argument overrides an earlier one.  For arguments which are single values,
+a later value replaces an earlier one.  For arguments which are
+cumulative, a later argument is added on to the list.  For such arguments,
+if you want to clear the old value and start afresh, give it the
+special value of CLEAR.
+
+=head2 Common Options
+
+The following arguments apply to both generating anchors and generating
+table-of-contents phases.
 
 =over 4
 
@@ -131,7 +196,7 @@ I<generate_toc> methods.
 If the input file/files is/are being overwritten (--overwrite is on), copy
 the original file to "I<filename>.I<string>".  If the value is empty, there
 is no backup file written.
-(def:org)
+(default:org)
 
 =item *
 --config I<file>
@@ -145,7 +210,7 @@ are treated as if they were in the argument list at the point at which the
 
 Enable verbose debugging output.  Used for debugging this module;
 in other words, don't bother.
-(def:off)
+(default:off)
 
 =item *
 --file I<file>
@@ -153,13 +218,23 @@ in other words, don't bother.
 Input file.  This is a cumulative list argument.  If you want to process
 more than one file, just add another --file I<file> to the list of
 arguments.  If you want to process a different file, you need to CLEAR this
-argument before you call a particular method.
-(def:undefined)
+argument first.
+(default:undefined)
 
 =item *
 --infile I<file>
 
 (same as --file)
+
+=item *
+--help
+
+Print a short help message and exit.
+
+=item *
+--man_help | --manpage | --man
+
+Print all documentation and exit.
 
 =item *
 --notoc_match I<string>
@@ -169,7 +244,7 @@ of contents, even though they match the "significant elements", then
 if this pattern matches contents inside the tag (not the body),
 then that tag will not be included, either in generating anchors
 nor in generating the ToC.
-(def: class="notoc")
+(default: class="notoc")
 
 =item *
 --overwrite
@@ -177,7 +252,7 @@ nor in generating the ToC.
 Overwrite the input file with the output.  If this is in effect, --outfile
 and --toc_file are ignored. Used in I<generate_anchors> for creating the
 anchors "in place" and in I<generate_toc> if the --inline option is in
-effect.  (def:off)
+effect.  (default:off)
 
 =item *
 --quiet
@@ -192,7 +267,7 @@ marks the start of the element.  The I<suffix> is what is required
 to be appended to the Table of Contents entry generated for that tag.
 This is a cumulative hash argument; if you wish to clear it,
 give --toc_after CLEAR to do so.
-(def: undefined)
+(default: undefined)
 
 =item *
 --toc_before I<tag>=I<prefix>
@@ -202,7 +277,7 @@ marks the start of the element.  The I<prefix> is what is required
 to be prepended to the Table of Contents entry generated for that tag.
 This is a cumulative hash argument; if you wish to clear it,
 give --toc_before CLEAR to do so.
-(def: undefined)
+(default: undefined)
 
 =item *
 --toc_end I<tag>=I<endtag>
@@ -213,7 +288,7 @@ marks the end of the element.  When matching in the input file, case
 is ignored (but make sure that all your I<tag> options referring to the same
 tag are exactly the same!).  This is a cumulative hash argument; if you
 wish to clear the default, give --toc_end CLEAR to do so.
-(def: H1=/H1  H2=/H2)
+(default: H1=/H1  H2=/H2)
 
 =item *
 --toc_entry I<tag>=I<level>
@@ -225,7 +300,7 @@ is negative, consective entries represented by the significant_element will
 be separated by the value set by --entrysep option.
 This is a cumulative hash argument; if you wish to clear the default,
 give --toc_entry CLEAR to do so.
-(def: H1=1  H2=2)
+(default: H1=1  H2=2)
 
 =item *
 --tocmap I<file>
@@ -237,21 +312,10 @@ See L<ToC Map File> for further information.
 
 =back 4
 
-=item *
-generate_anchors
+=head2 Generate Anchors Options
 
-    $toc->generate_anchors(["--outfile", "index2.html",
-        ]);
-
-Generates anchors for the significant elements in the HTML documents.
-Optionally takes one argument, a reference to an array of arguments, which
-will be used to influence this method's behavour (and if arguments have
-already been set earlier, they also will be taken into account).
-
-B<Arguments:>
-
-These arguments apply only to this method, but see above for common
-arguments.
+These arguments apply only to generating anchors,
+but see above for common arguments.
 
 =over 4
 
@@ -262,7 +326,7 @@ File to write the output to.  This is where the modified be-anchored HTML
 output goes to.  Note that it doesn't make sense to use this option if you
 are processing more than one file.  If you give '-' as the filename, then
 output will go to STDOUT.
-(def: STDOUT)
+(default: STDOUT)
 
 =item *
 --useorg	
@@ -272,21 +336,10 @@ form I<infile>.I<bak>  (see --infile and --bak).
 
 =back 4
 
-=item *
-generate_toc
+=head2 Generate TOC Options
 
-    $toc->generate_toc(\@args);
-
-Generates a Table of Contents (ToC) for the significant elements in the
-HTML documents.
-Optionally takes one argument, a reference to an array of arguments, which
-will be used to influence this method's behavour (and if arguments have
-already been set earlier, they also will be taken into account).
-
-B<Arguments:>
-
-These arguments apply only to this method, but see above for common
-arguments.
+These arguments apply only to generating a table-of-contents,
+but see above for common arguments.
 
 =over 4
 
@@ -294,7 +347,7 @@ arguments.
 --entrysep I<string>
 
 Separator string for non-E<lt>liE<gt> item entries
-(def: ", ")
+(default: ", ")
 
 =item *
 --footer I<file>
@@ -326,20 +379,20 @@ Use only text content in significant elements.
 --title I<string>
 
 Title for ToC page (if not using --header or --inline or --toc_only)
-(def: "Table of Contents")
+(default: "Table of Contents")
 
 =item *
 --toc_file I<file> / --toc I<file>
 
 File to write the output to.  This is where the ToC goes.
 If you give '-' as the filename, then output will go to STDOUT.
-(def: STDOUT)
+(default: STDOUT)
 
 =item *
 --toc_label I<string>
 
 HTML text that labels the ToC.  Always used.
-(def: "E<lt>H1E<gt>Table of ContentsE<lt>/H1E<gt>")
+(default: "E<lt>H1E<gt>Table of ContentsE<lt>/H1E<gt>")
 
 
 =item *
@@ -350,14 +403,14 @@ match the tag where the ToC should be put.  This can be a start-tag, an
 end-tag or a comment, but the E<lt> should be left out; that is, if you
 want the ToC to be placed after the BODY tag, then give "BODY".  If you
 want a special comment tag to make where the ToC should go, then include
-the comment marks, for example: "!--toc--" (def:BODY)
+the comment marks, for example: "!--toc--" (default:BODY)
 
 =item *
 --toc_tag_replace
 
 In conjunction with --toc_tag, this is a flag to say whether the given tag
 should be replaced, or if the ToC should be put after the tag.
-(def:false)
+(default:false)
 
 =item *
 --toc_only / --notoc_only
@@ -369,7 +422,7 @@ If --toc_only is false (i.e. --notoc_only is set) then if there is no
 --header, and --inline is not true, then a suitable HTML page header will
 be output, and if there is no --footer and --inline is not true,
 then a HTML page footer will be output.
-(def:--notoc_only)
+(default:--notoc_only)
 
 =item *
 --toclabel I<string>
@@ -378,24 +431,13 @@ then a HTML page footer will be output.
 
 =back 4
 
-=item *
-args
-
-    $toc->args(\@args);
-
-    $toc->args(["--file", "CLEAR"]);
-
-Updates the current arguments/options of the HTML::GenToc object.
-Takes a reference to an array of arguments, which will be used
-in invocations of other methods.
-
-=back 4
+=head1 FILE FORMATS
 
 =head2 Config File
 
 The Config file is a way of specifying default options (including
 specifying significant elements) in a file instead of having to
-do it when you call a particular method. 
+do it when you call this.
 
 The file may contain blank lines and comments (prefixed by
 '#') which are ignored.  Continutation lines may be marked
@@ -496,10 +538,10 @@ For backwards compatibility with htmltoc, this method of specifying
 significant elements for the ToC is retained, but see also L<Config File>
 for an alternative method.
 
-The ToC map file allows you to tell HTML::GenToc what significant elements
-to include in the ToC, what level they should appear in the ToC, and
-any text to include before and/or after the ToC entry. The format of
-the map file is as follows:
+The ToC map file allows you to specify what significant elements to
+include in the ToC, what level they should appear in the ToC, and any
+text to include before and/or after the ToC entry. The format of the map
+file is as follows:
 
     significant_element:level:sig_element_end:before_text,after_text
     significant_element:level:sig_element_end:before_text,after_text
@@ -535,9 +577,9 @@ However, one can index DT sections of a definition list by
 using the value DD in the sig_element_end field (this does
 assume that each DT has a DD following it).
 
-If the sig_element_end is empty, then the corresponding end tag
-of the specified significant_element is used. Example: If H1 is
-the significant_element, than HTML::GenToc looks for a "E<lt>/H1E<gt>" for
+If the sig_element_end is empty, then the corresponding end tag of the
+specified significant_element is used. Example: If H1 is the
+significant_element, then the program looks for a "E<lt>/H1E<gt>" for
 terminating the significant_element.
 
 Caution: the sig_element_end value should not contain the `E<lt>`
@@ -566,10 +608,10 @@ works.
 
 B<EXAMPLE 1>
 
-The following map file reflects the default mapping HTML::GenToc uses if no
+The following map file reflects the default mapping used if no
 map file is explicitly specified:
 
-    # Default mapping for HTML::GenToc
+    # Default mapping
     # Comments can be inserted in the map file via the '#' character
     H1:1 # H1 are level 1 ToC entries
     H2:2 # H2 are level 2 ToC entries
@@ -593,13 +635,15 @@ The following map file tries to index definition terms:
     DT:3:DD:<EM>,<EM>    # Assumes document has a DD for each DT, otherwise ToC
                        # will get entries with alot of text.
 
+=head1 DETAILS
+
 =head2 Formatting the ToC
 
 The ToC Map File gives you control on how the ToC entries may look,
-but HTML::GenToc has other options to affect the final appearance of the
+but there are other options to affect the final appearance of the
 ToC file created.
 
-With the -header option, HTML::GenToc will prepend the contents of the file
+With the -header option, the contents of the given file will be prepended
 before the generated ToC. This allows you to have introductory text,
 or any other text, before the ToC.
 
@@ -616,11 +660,11 @@ the header file should contain for inlining the ToC.
 
 =back 4
 
-With the --toc_label option, HTML::GenToc will prepend the contents of
-the given string before the generated ToC (but after any text
-taken from a --header file).
+With the --toc_label option, the contents of the given string will be
+prepended before the generated ToC (but after any text taken from a
+--header file).
 
-With the -footer option, HTML::GenToc will append the contents of the file
+With the -footer option, the contents of the file will be appended
 after the generated ToC.
 
 =over 4
@@ -632,27 +676,30 @@ and HTML tags (unless, of course, you are using the --inline option).
 
 =back 4
 
-HTML::GenToc will add the appropriate HTML markup to if either the -header
-or -footer option is not specified to insure a valid HTML document is
-created for the ToC.
+If the -header option is not specified, the appropriate starting
+HTML markup will be added, unless the --toc_only option is specified.
+If the -footer option is not specified, the appropriate closing
+HTML markup will be added, unless the --toc_only option is specified.
 
 If you do not want/need to deal with header, and footer, files, then
-HTML::GenToc allows you specify the title, -title option, of the ToC file;
+you are alloed to specify the title, -title option, of the ToC file;
 and it allows you to specify a heading, or label, to put before ToC
 entries' list, the -toclabel option. Both options have default values,
-see Methods for more information on each option.
+see L<OPTIONS> for more information on each option.
 
-If you do not want HTML::GenToc to supply HTML page tags, and just want
+If you do not want HTML page tags to be supplied, and just want
 the ToC itself, then specify the --toc_only option.
 If there are no --header or --footer files, then this will simply
 output the contents of --toc_label and the ToC itself.
 
 =head2 Inlining the ToC
 
-HTML::GenToc supports the ability to incorporating the ToC directly into an
-HTML document via the -inline option.  Inlining will be done on the
-first file in the list of files processed, and will only be done
-if that file contains an opening tag matching the --toc_tag value.
+The ability to incorporate the ToC directly into an HTML document
+is supported via the -inline option.
+
+Inlining will be done on the first file in the list of files processed,
+and will only be done if that file contains an opening tag matching the
+--toc_tag value.
 
 If --overwrite is true, then the first file in the list will be
 overwritten, with the generated ToC inserted at the appropriate spot.
@@ -668,13 +715,13 @@ B<Example 1>
     toc_tag = BODY
     toc_tag_replace = off
 
-This will put the generated ToC after the BODY tag of the first file.  If
-the --header option is specified, then the contents of the specified file
-are inserted after the BODY tag.  If the --toc_label option is not empty,
-then HTML::GenToc inserts the text specified by the --toc_label option.  Then
-the ToC is inserted, and finally, if the --footer option is specified, it
-inserts the footer.  Then the rest of the input file follows as it was
-before.
+This will put the generated ToC after the BODY tag of the first file.
+If the --header option is specified, then the contents of the specified
+file are inserted after the BODY tag.  If the --toc_label option is not
+empty, then the text specified by the --toc_label option is inserted.
+Then the ToC is inserted, and finally, if the --footer option is
+specified, it inserts the footer.  Then the rest of the input file
+follows as it was before.
 
 B<Example 2>
 
@@ -797,6 +844,7 @@ None by default.
 
 perl(1)
 htmltoc(1)
+perlpod(1)
 AppConfig
 Getopt::Long
 Data::Dumper
@@ -853,7 +901,7 @@ BEGIN {
 
 @EXPORT_OK = qw();
 
-$VERSION = '0.3';
+$VERSION = '1.0';
 
 #################################################################
 use constant GEN_TOC => "GEN_TOC";
@@ -890,16 +938,33 @@ sub new {
     # and set with the passed-in args
     if ($args_ref && @{$args_ref}) {
 	if (!$self->args($args_ref)) {
-	    pod2usage({ -message => "Unrecognised option",
-			-exitval => "NOEXIT",
-			-verbose => 0,
-		});
+	    print STDERR "Unrecognised option, try --help\n";
 	    return 0;
 	}
     }
 
     return $self;
 } # new
+
+# Name: args
+# sets arguments for a given Toc
+# Args:
+#   $self
+#   \@args (array of command-line arguments in Args style)
+sub args {
+    my $self = shift;
+    my $args_ref = (@_ ? shift : 0);
+
+    # and set with the passed-in args
+    if ($args_ref && @{$args_ref}) {
+	if (!$self->SUPER::args($args_ref)) {
+	    print STDERR "Unrecognised option, try --help\n";
+	    return 0;
+	}
+    }
+
+    return 1;
+} # args
 
 # Name: generate_anchors
 # Creates a version of the HTML with anchors in it
@@ -913,12 +978,13 @@ sub generate_anchors ($;$) {
     # and set with the passed-in args
     if ($args_ref && @{$args_ref}) {
 	if (!$self->args($args_ref)) {
-	    pod2usage({ -message => "Unrecognised option",
-			-exitval => "NOEXIT",
-		});
+	    print STDERR "Unrecognised option, try --help\n";
 	    return 0;
 	}
     }
+
+    # print help message if required
+    $self->do_help();
 
     %{$self->{__anchors}} = ();
     my @new_html;
@@ -988,13 +1054,13 @@ sub generate_toc ($;$) {
     # and set with the passed-in args
     if ($args_ref && @{$args_ref}) {
 	if (!$self->args($args_ref)) {
-	    pod2usage({ -message => "Unrecognised option",
-			-exitval => "NOEXIT",
-			-verbose => 0,
-		});
+	    print STDERR "Unrecognised option, try --help\n";
 	    return 0;
 	}
     }
+
+    # print help message if required
+    $self->do_help();
 
     my @toc = ();
     # put the header at the start of the ToC if there is one
@@ -1227,9 +1293,11 @@ sub define_vars {
 	DEFAULT => ", ",
 	});
     $self->define("footer=s");
+    $self->define("help");
     $self->define("inline");
     $self->define("header=s");
     $self->define("infile|file=s@"); # names of files to be processed
+    $self->define("man_help|manpage|man");
     $self->define("notoc_match=s", {
 	DEFAULT => 'class="notoc"',
 	});
@@ -1293,6 +1361,28 @@ sub init_our_data ($) {
     $self->{__anchors} = \%anchors;
 
 } # init_our_data
+
+#--------------------------------#
+# Name: do_help
+# Args:
+#   $self
+sub do_help ($) {
+    my $self = shift;
+
+    if ($self->man_help()) {
+	pod2usage({ -message => "$0",
+		    -exitval => 0,
+		    -verbose => 2,
+	    });
+    }
+    if ($self->help()) {
+	pod2usage({ -message => "$0",
+		    -exitval => 0,
+		    -verbose => 0,
+	    });
+    }
+
+} # do_help
 
 #--------------------------------#
 # Name: read_tocmap
