@@ -1,0 +1,13 @@
+Revision history for Perl module HTML::GenToc.
+
+0.1  Mon 28th Jan 2002
+	- conversion of htmltoc to a module
+	- use HTML::SimpleParse to parse the HTML
+	- split the ToC generation into two phases; generate_anchors
+and generate_toc
+	- expanded the --inline option to place the ToC after the first
+instance of any tag, or to replace a given tag
+	- no longer use prefix + $$ to make anchor names unique; instead
+derive them from the content of the significant element.
+	- various other slight improvements
+
