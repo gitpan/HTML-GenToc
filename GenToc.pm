@@ -162,6 +162,16 @@ argument before you call a particular method.
 (same as --file)
 
 =item *
+--notoc_match I<string>
+
+If there are certain individual tags you don't wish to include in the table
+of contents, even though they match the "significant elements", then
+if this pattern matches contents inside the tag (not the body),
+then that tag will not be included, either in generating anchors
+nor in generating the ToC.
+(def: class="notoc")
+
+=item *
 --overwrite
 
 Overwrite the input file with the output.  If this is in effect, --outfile
@@ -775,7 +785,9 @@ Tell me about them.
 
 HTML::GenToc requires Perl 5.005_03 or later.
 
-It also requires HTML::SimpleParse, AppConfig and Pod::Usage.
+It also requires HTML::SimpleParse, AppConfig, Getopt::Long,
+Data::Dumper (only for debugging purposes)
+and Pod::Usage.
 
 =head1 EXPORT
 
@@ -786,6 +798,8 @@ None by default.
 perl(1)
 htmltoc(1)
 AppConfig
+Getopt::Long
+Data::Dumper
 HTML::SimpleParse
 
 =head1 AUTHOR
@@ -839,7 +853,7 @@ BEGIN {
 
 @EXPORT_OK = qw();
 
-$VERSION = '0.2';
+$VERSION = '0.3';
 
 #################################################################
 use constant GEN_TOC => "GEN_TOC";
@@ -1150,25 +1164,25 @@ sub do_var_action($$$) {
     }
     # if this is config, read in the given config file
     elsif ($name eq "config") {
-	if ($parent->debug()) {
+	if ($state_ref->get('debug')) {
 	    print STDERR ">>> reading in config file $value\n";
 	}
 	$parent->file($value);
-	if ($parent->debug()) {
+	if ($state_ref->get('debug')) {
 	    print STDERR "<<< read in config file $value\n";
 	}
     }
     # if this is tocmap, read in the given tocmap file
     elsif ($name eq "tocmap") {
-	if ($parent->debug()) {
+	if ($state_ref->get('debug')) {
 	    print STDERR ">>> reading in tocmap file $value\n";
 	}
 	$parent->read_tocmap($value);
-	if ($parent->debug()) {
+	if ($state_ref->get('debug')) {
 	    print STDERR "<<< read in tocmap file $value\n";
 	}
     }
-    if ($parent->debug()) {
+    if ($state_ref->get('debug')) {
 	print STDERR "=========\n changed $name to $value\n =========\n";
 	if (ref($state_ref->get($name)) eq "HASH")
 	{
@@ -1195,11 +1209,13 @@ sub define_vars {
 	});
 
     # reference to self!  (do not change!)
-    $self->define(GEN_TOC);
+    $self->define("GEN_TOC", {
+		ARGCOUNT => ARGCOUNT_ONE,
+    });
     $self->set(GEN_TOC, $self);
 
     #
-    # All the options
+    # All the options (alphabetical)
     #
     $self->define("bak=s", {
 	DEFAULT => "org",
@@ -1214,6 +1230,9 @@ sub define_vars {
     $self->define("inline");
     $self->define("header=s");
     $self->define("infile|file=s@"); # names of files to be processed
+    $self->define("notoc_match=s", {
+	DEFAULT => 'class="notoc"',
+	});
     $self->define("ol");
     $self->define("overwrite", {
 	DEFAULT => 0,
@@ -1432,6 +1451,7 @@ sub make_anchors ($$) {
     my $tok;
     my $next_tok;
     my $i;
+    my $notoc = $self->notoc_match();
     my @tree = $hp->tree();
     while (@tree) {
 	$tok = shift @tree;
@@ -1445,7 +1465,9 @@ sub make_anchors ($$) {
 	$is_title = 0;
 	# check if tag included in TOC
 	foreach my $key (keys %{$self->toc_entry()}) {
-	    if ($tok->{content} =~ /$key/i) {
+	    if ($tok->{content} =~ /$key/i
+		&& (!$notoc
+		    || $tok->{content} !~ /$notoc/)) {
 		$tag = $key;
 		# level of significant element
 		$level = abs($self->toc_entry()->{$key});
@@ -1583,6 +1605,7 @@ sub make_toc ($$) {
     my $name = "NOTOC"; # if no anchor is found...
     my $is_title;
     my $found_title = 0;
+    my $notoc = $self->notoc_match();
     # go through the HTML
     my $tok;
     my @tree = $hp->tree();
@@ -1594,7 +1617,9 @@ sub make_toc ($$) {
 	{
 	    # check if tag included in TOC
 	    foreach my $key (keys %{$self->toc_entry()}) {
-		if ($tok->{content} =~ /$key/i) {
+		if ($tok->{content} =~ /$key/i
+		    && (!$notoc
+			|| $tok->{content} !~ /$notoc/)) {
 		    $tag = $key;
 		    # level of significant element
 		    $level = abs($self->toc_entry()->{$key});

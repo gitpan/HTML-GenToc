@@ -66,8 +66,9 @@ if ($result) {
 
 @args = ();
 push @args, "--file", "CLEAR", "--bak", "", "--noinline", "--nooverwrite",
-"--file", "testb.wml", "--outfile", "testb1.wml",
-"--toc_entry", "H3=3", "--toc_end", "H3=/H3";
+"--file", "testb.wml", "--outfile", "testb1.wml";
+push @args, "--toc_entry", "H3=3";
+push @args, "--toc_end", "H3=/H3";
 $result = $toc->generate_anchors(\@args);
 if ($result) {
     print "ok 7\n";

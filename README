@@ -1,4 +1,4 @@
-HTML/GenToc version 0.2
+HTML/GenToc version 0.3
 =======================
 
 HTML::GenToc generates anchors and a table of contents for
@@ -25,8 +25,9 @@ DEPENDENCIES
 This module requires these other modules and libraries:
 
   Pod::Usage
-  AppConfig
+  AppConfig and Getopt::Long
   HTML::SimpleParse
+  Data::Dumper (for debugging only)
 
 COPYRIGHT AND LICENCE
 

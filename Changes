@@ -1,6 +1,9 @@
 Revision history for Perl module HTML::GenToc.
 
-0.2  Sat Feb 23 2002
+0.3  Fri 1st Mar 2002
+	- added --notoc_match option to suppress ToC for individual tags
+
+0.2  Sat 23rd Feb 2002
 	- added README file
 	- updated documentation
 	- made the generated ToC more XHTML compliant
