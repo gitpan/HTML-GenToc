@@ -1,6 +1,9 @@
 Revision history for Perl module HTML::GenToc.
 ==============================================
 
+2.02 Sat 15th February 2003
+	- removed heavily spammed email address from documentation.
+
 2.01 Sun 8th December 2002
 	- Bug fix in hypertoc, to fix the way Getopt::ArgvFile is called.
 

@@ -73,8 +73,6 @@ or one can overwrite the original file, with the original backed
 up with a suffix (default: "org") appended to the filename.
 
 One can also define options in a config file as well as on the command-line.
-The default configuration files are C<~/.hypertocrc> and C<.hypertocrc>
-but you can specify additional files with the C<--config> option.
 
 =head1 OPTIONS
 
@@ -755,14 +753,14 @@ Getopt::Long
 
 =head1 AUTHOR
 
-Kathryn Andersen      rubykat@katspace.com    http://www.katspace.com
+Kathryn Andersen      http://www.katspace.com
 based on htmltoc by
-Earl Hood       ehood@medusa.acs.uci.edu
+Earl Hood       ehood AT medusa.acs.uci.edu
 
 =head1 COPYRIGHT
 
-Copyright (C) 1994-1997  Earl Hood, ehood@medusa.acs.uci.edu
-Copyright (C) 2002 Kathryn Andersen, rubykat@katspace.com
+Copyright (C) 1994-1997  Earl Hood, ehood AT medusa.acs.uci.edu
+Copyright (C) 2002 Kathryn Andersen
 
 This program is free software; you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -823,7 +821,7 @@ this script is back here in this file.
 # Globals
 #
 use vars qw($VERSION);
-$VERSION = '2.01';
+$VERSION = '2.02';
 
 #################################################################
 # Includes

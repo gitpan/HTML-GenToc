@@ -1,4 +1,4 @@
-HTML/GenToc version 2.01
+HTML/GenToc version 2.02
 ========================
 
 HTML::GenToc generates anchors and a table of contents for
@@ -45,8 +45,8 @@ Testing of this distribution depends on the following modules:
 
 COPYRIGHT AND LICENCE
 
-Copyright (C) 1994-1997  Earl Hood, ehood@medusa.acs.uci.edu
-Copyright (C) 2002 Kathryn Andersen, rubykat@katspace.com
+Copyright (C) 1994-1997  Earl Hood, ehood AT medusa.acs.uci.edu
+Copyright (C) 2002 Kathryn Andersen
 
 This program is free software; you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by

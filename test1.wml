@@ -12,8 +12,8 @@ $(TITLE=The Title)
 
 <h2>Authors</h2>
 <p><strong>Kathryn Andersen</strong>
-&lt;<a href="mailto:rubykat@katspace.com">
-rubykat@katspace.com</a>&gt;
+&lt;<a href="mailto:kitty@example.com">
+kitty@example.com</a>&gt;
 is the author of HTML::GenToc.
 </p>
 

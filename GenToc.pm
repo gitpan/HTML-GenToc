@@ -82,7 +82,7 @@ All arguments can be set when the object is created, and further options
 can be set on any method (though some may not make sense).  Arguments
 to methods can take either a hash of arguments, or a reference to an
 array (which will then be processed as if it were a command-line, which
-makes this very easy to use from scripts even if you don't wish to use
+makes this easy to use from scripts even if you don't wish to use
 the commonly used Getopt::Long module in your script).
 
 The arguments get treated differently depending on whether they are
@@ -93,15 +93,16 @@ a reference to an array or a reference to a hash.  These will replace
 any value for that argument that might have been there before.
 
 When the arguments are in a reference to an array, it is treated as if
-it were a command-line: boolean options are set to true as soon as the
-option is given (no value is expected to follow),  boolean options with
-the word "no" prepended set the option to false, string options are
-expected to have a string value following, and those options which are
-internally arrays or hashes are treated as cumulative; that is, the
-value following the --option is added to the current set for that
-option,  to add more, one just repeats the --option with the next value,
-and in order to reset that option to empty, the special value of "CLEAR"
-must be added to the list.
+it were a command-line: option names are expected to start with '--' or
+'-', boolean options are set to true as soon as the option is given (no
+value is expected to follow),  boolean options with the word "no"
+prepended set the option to false, string options are expected to have a
+string value following, and those options which are internally arrays or
+hashes are treated as cumulative; that is, the value following the
+--option is added to the current set for that option,  to add more, one
+just repeats the --option with the next value, and in order to reset
+that option to empty, the special value of "CLEAR" must be added to the
+list.
 
 =cut
 
@@ -126,7 +127,7 @@ BEGIN {
 
 @EXPORT_OK = qw();
 
-$VERSION = '2.01';
+$VERSION = '2.02';
 
 #################################################################
 
@@ -1598,8 +1599,7 @@ HTML markup will be added, unless the --toc_only option is specified.
 If you do not want/need to deal with header, and footer, files, then
 you are alloed to specify the title, -title option, of the ToC file;
 and it allows you to specify a heading, or label, to put before ToC
-entries' list, the -toclabel option. Both options have default values,
-see L<OPTIONS> for more information on each option.
+entries' list, the -toclabel option. Both options have default values.
 
 If you do not want HTML page tags to be supplied, and just want
 the ToC itself, then specify the --toc_only option.
@@ -1763,14 +1763,14 @@ HTML::SimpleParse
 
 =head1 AUTHOR
 
-Kathryn Andersen      rubykat@katspace.com    http://www.katspace.com
+Kathryn Andersen      http://www.katspace.com
 based on htmltoc by
-Earl Hood       ehood@medusa.acs.uci.edu
+Earl Hood       ehood AT medusa.acs.uci.edu
 
 =head1 COPYRIGHT
 
-Copyright (C) 1994-1997  Earl Hood, ehood@medusa.acs.uci.edu
-Copyright (C) 2002 Kathryn Andersen, rubykat@katspace.com
+Copyright (C) 1994-1997  Earl Hood, ehood AT medusa.acs.uci.edu
+Copyright (C) 2002 Kathryn Andersen
 
 This program is free software; you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
