@@ -13,10 +13,15 @@ HTML::GenToc - Generate/insert anchors and a Table of Contents (ToC) for HTML do
 
   my $toc = new HTML::GenToc(title=>"Table of Contents",
 			  toc=>$my_toc_file,
-			  tocmap=>$my_tocmap_file,
+			  toc_entry=>{
+			    H1=>1,
+			    H2=>2
+			  },
+			  toc_end=>{
+			    H1=>'/H1',
+			    H2=>'/H2'
+			  }
     );
-
-  my $toc = new HTML::GenToc(\@ARGV);
 
   # add further arguments
   $toc->args(toc_tag=>"BODY",
@@ -55,8 +60,7 @@ they appear in a second level list in the ToC.
 
 Information on the significant elements and what level they should occur
 are passed in to the methods used by this object, or one can use the
-defaults, or one can use an external file, the L<ToC Map File> to define
-them.
+defaults.
 
 There are two phases to the ToC generation.  The first phase is to
 put suitable anchors into the HTML documents, and the second phase
@@ -64,10 +68,10 @@ is to generate the ToC from HTML documents which have anchors
 in them for the ToC to link to.
 
 For more information on controlling the contents of the created ToC, see
-L<Formatting the ToC>.
+L</Formatting the ToC>.
 
 HTML::GenToc also supports the ability to incorporate the ToC into the HTML
-document itself via the -inline option.  See L<Inlining the ToC> for more
+document itself via the -inline option.  See L</Inlining the ToC> for more
 information.
 
 In order for HTML::GenToc to support linking to significant elements,
@@ -81,9 +85,8 @@ up with a suffix (default: "org") appended to the filename.
 All arguments can be set when the object is created, and further options
 can be set on any method (though some may not make sense).  Arguments
 to methods can take either a hash of arguments, or a reference to an
-array (which will then be processed as if it were a command-line, which
-makes this easy to use from scripts even if you don't wish to use
-the commonly used Getopt::Long module in your script).
+array (though the array usage is deprecated and is here for backwards
+compatibility only).
 
 The arguments get treated differently depending on whether they are
 given in a hash or a reference to an array.  When the arguments are
@@ -104,6 +107,9 @@ just repeats the --option with the next value, and in order to reset
 that option to empty, the special value of "CLEAR" must be added to the
 list.
 
+(You can see why I want to phase this out -- it makes the code more
+complicated and ambiguous and prone to error)
+
 =cut
 
 package HTML::GenToc;
@@ -111,23 +117,13 @@ package HTML::GenToc;
 require 5.005_03;
 use strict;
 
-use vars qw(@ISA @EXPORT @EXPORT_OK $VERSION);
+use vars qw($VERSION);
 BEGIN {
-    @ISA	= qw(Exporter);
-    require Exporter;
     use Data::Dumper;
     use HTML::SimpleParse;
 }
 
-# Items to export into callers namespace by default. Note: do not export
-# names by default without a very good reason. Use EXPORT_OK instead.
-# Do not simply export all your public functions/methods/constants.
-# Well, since this is an Object, we ain't exportin' nuttin'
-@EXPORT = qw();
-
-@EXPORT_OK = qw();
-
-$VERSION = '2.10';
+$VERSION = '2.22';
 
 #################################################################
 
@@ -139,17 +135,18 @@ $VERSION = '2.10';
 
     $toc = new HTML::GenToc();
 
-    $toc = new HTML::GenToc(\@args);
+    $toc = new HTML::GenToc(\@args); # deprecated!
 
-    $toc = new HTML::GenToc(toc_end=>\%my_toc_end,
+    $toc = new HTML::GenToc(toc_entry=>\%my_toc_entry,
+	toc_end=>\%my_toc_end,
+	bak=>'bak',
     	...
         );
 
 Creates a new HTML::GenToc object.
 
-If one argument is given, it is assumed to be a reference to an array
-of arguments.  If more than one argument is given, it is assumed
-to be a hash of arguments.
+The arguments can either be a hash, or (deprecated) a reference to
+an array of arguments.
 These arguments will be used in invocations of other methods.
 
 See the other methods for possible arguments.
@@ -170,18 +167,18 @@ sub new {
     return $self;
 } # new
 
-
 =head2 Method -- args
 
-    $toc->args(\@args);
+    $toc->args(\@args); # deprecated!
 
-    $toc->args(["--infile", "CLEAR", "--infile", "myfile.html"]);
-
-    $toc->args(infile=>'myfile.html');
+    $toc->args(infile=>['myfile.html', 'thatfile.html']);
 
 Updates the current arguments/options of the HTML::GenToc object.
-Takes either a hash, or a reference to an array of arguments,
-which will be used in invocations of other methods.
+Takes either a hash, or (deprecated) a reference to an array of
+arguments, which will be used in invocations of other methods.
+
+The hash arguments must be just the name of the argument.
+The array arguments must have a '-' or '--' in front of them.
 
 B<Common Options>
 
@@ -195,7 +192,7 @@ them for each method.
 
 bak => I<string>
 
-If the input file/files is/are being overwritten (--overwrite is on), copy
+If the input file/files is/are being overwritten (B<overwrite> is on), copy
 the original file to "I<filename>.I<string>".  If the value is empty, there
 is no backup file written.
 (default:org)
@@ -208,19 +205,35 @@ Enable verbose debugging output.  Used for debugging this module;
 in other words, don't bother.
 (default:off)
 
+=item file_strings
+
+file_strings => \@content_of_files
+
+If this is set, then the files in the B<infile> array are not read, but
+the content of this array is used instead, with the names in the
+B<infile> array just used as names.  The B<infile> array and the
+B<file_strings> array must be the same size. (see also
+B<set_file_strings>)
+
+(this option is not supported in the old array format)
+
 =item infile
 
-infile => \@files | '--infile', $file
+infile => \@files
 
-Input file(s). If the arguments are in a hash, this expects a reference
-to an array of filenames.  If the arguments are a reference to an array
-(the old way) then a single filename is expected; if you want to process
-more than one file in this form, just add another --infile, $filename
-to the array of arguments.  In the arrayref form, use the special name
-"CLEAR" to clear the current array of input files, if you want to process
-a different file.
+infile => ['index.html']
 
-(see --in_string also)
+Input file(s).  This expects a reference to an array of files.
+
+'--infile', $file  (array version, deprecated)
+
+If the arguments are a reference to an array (the old way) then a single
+filename is expected; if you want to process more than one file in this
+form, just add another C<--infile, $filename> to the array of arguments.
+In the arrayref form, use the special name "CLEAR" to clear the current
+array of input files, if you want to process a different file.
+
+(see B<in_string> and B<file_strings> also)
 
 (default:undefined)
 
@@ -233,105 +246,80 @@ infile.  Instead, the first infile is taken just to be the filename
 to use in referring to this content.  This is useful if one is using
 this module as part of other processing; the filename given could be
 the name of the final output file which hasn't been written yet.
-Note that it is still necessary to give at least one 'infile' name
+Note that it is still necessary to give at least one B<infile> name
 when using this option.
 
 =item notoc_match
 
 notoc_match => I<string>
 
-If there are certain individual tags you don't wish to include in the table
-of contents, even though they match the "significant elements", then
-if this pattern matches contents inside the tag (not the body),
-then that tag will not be included, either in generating anchors
-nor in generating the ToC.
-(default: class="notoc")
+If there are certain individual tags you don't wish to include in the
+table of contents, even though they match the "significant elements",
+then if this pattern matches contents inside the tag (not the body),
+then that tag will not be included, either in generating anchors nor in
+generating the ToC.  (default: C<class="notoc">)
 
 =item overwrite
 
 overwrite => 1
 
-Overwrite the input file with the output.  If this is in effect, --outfile
-and --toc_file are ignored. Used in I<generate_anchors> for creating the
-anchors "in place" and in I<generate_toc> if the --inline option is in
-effect.  (default:off)
+Overwrite the input file with the output.  If this is in effect,
+B<outfile> and B<toc_file> are ignored. Used in
+L<generate_anchors|Method -- generate_anchors> for creating the anchors
+"in place" and in L<generate_toc|Method -- generate_toc> if the
+B<inline> option is in effect.  (default:off)
 
 =item quiet
 
 quiet => 1
 
-Suppress informative messages.
-
-=item toc_after
-
-toc_after => \%toc_after_data | --toc_after I<tag>=I<suffix>
-
-%toc_after_data = { I<tag1> => I<suffix1>,
-    I<tag2> => I<suffix2>
-    };
-
-For defining significant elements.  If the arguments are in hash form,
-this expects a reference to a hash of tag=>suffix pairs.  If the arguments
-are in arrayref form, this is a cumulative argument; each instance of
---toc_after, I<value> in the array adds another pair to the internal hash;
-if you wish to clear it, give --toc_after CLEAR to do so.
-
-The I<tag> is the HTML tag which marks the start of the element.  The
-I<suffix> is what is required to be appended to the Table of Contents
-entry generated for that tag.
-
-(default: undefined)
-
-=item toc_before
-
-toc_before => \%toc_before_data | --toc_before I<tag>=I<prefix>
-
-%toc_before_data = { I<tag1> => I<prefix1>,
-    I<tag2> => I<prefix2>
-    };
-
-For defining significant elements.  The I<tag> is the HTML tag which
-marks the start of the element.  The I<prefix> is what is required to be
-prepended to the Table of Contents entry generated for that tag.  For
-the array-ref form of arguments, this is a cumulative hash argument; if
-you wish to clear it, give --toc_before CLEAR to do so.
-
-(default: undefined)
+Suppress informative messages. (default: off)
 
 =item toc_end
 
-toc_end => \%toc_end_data | --toc_end I<tag>=I<endtag>
+toc_end => \%toc_end_data
 
 %toc_end_data = { I<tag1> => I<endtag1>,
     I<tag2> => I<endtag2>
     };
 
+toc_end => { H1 => '/H1', H2 => '/H2' }
+
 For defining significant elements.  The I<tag> is the HTML tag which
 marks the start of the element.  The I<endtag> the HTML tag which marks
 the end of the element.  When matching in the input file, case is
 ignored (but make sure that all your I<tag> options referring to the
-same tag are exactly the same!).  For the array-ref form of arguments,
-this is a cumulative hash argument; if you wish to clear the default,
-give --toc_end CLEAR to do so.
+same tag are exactly the same!).
+
+'--toc_end', 'I<tag>=I<endtag>'
+
+For the (deprecated) array-ref form of arguments, this is a cumulative
+hash argument; if you wish to clear the default, give
+C<'--toc_end', 'CLEAR'> to do so.
 
 (default: H1=/H1  H2=/H2)
 
 =item toc_entry
 
-toc_entry => \%toc_entry_data | --toc_entry I<tag>=I<level>
+toc_entry => \%toc_entry_data
 
 %toc_entry_data = { I<tag1> => I<level1>,
     I<tag2> => I<level2>
     };
 
+toc_entry => { H1 => 1, H2 => 2 }
+
 For defining significant elements.  The I<tag> is the HTML tag which marks
 the start of the element.  The I<level> is what level the tag is considered
 to be.  The value of I<level> must be numeric, and non-zero. If the value
 is negative, consective entries represented by the significant_element will
-be separated by the value set by --entrysep option.
+be separated by the value set by B<entrysep> option.
 
-For the array-ref form of arguments, this is a cumulative hash argument;
-if you wish to clear the default, give --toc_entry CLEAR to do so.
+'--toc_entry', 'I<tag>=I<level>'
+
+For the (deprecated) array-ref form of arguments, this is a cumulative
+hash argument; if you wish to clear the default, give
+C<'--toc_entry', 'CLEAR'> to do so.
 
 (default: H1=1  H2=2)
 
@@ -339,26 +327,25 @@ if you wish to clear the default, give --toc_entry CLEAR to do so.
 
 tocmap => I<file>
 
-ToC map file defining significant elements.  This is read in
-immediately, and overrides any previous toc_entry, toc_end, toc_before
-and toc_after options.  However, they can be cleared and/or added to by
-later options if the arguments are in array-ref form.  However note that
-if the arguments are given in hash form, there is no actual order to the
-options, and therefore there is no "later", thus it would be very unwise
-to combine the tocmap option and the toc_entry, toc_end, toc_before or
-toc_after options in the same call.
+ToC map file defining significant elements.  (This is deprecated, and is
+only here for backwards compatibility with htmltoc.)
 
-See L<ToC Map File> for further information.
+This overrides any previously set B<toc_entry>, B<toc_end>,
+B<toc_before> and B<toc_after> options.  It is inadvisable to use both
+B<tocmap> and B<toc_entry>/B<toc_end>/B<toc_before>/B<toc_after> options
+in the same call, as it is undefined as to which one will override the
+other.
+
+See L</ToC Map File> for further information.
 
 =item to_string
 
 to_string => 1
 
-Return the output as a string.  This is where the modified HTML
-output goes to.  This does not override other methods of output,
-except in the case where the user hasn't specified any other method
-of output; then the default method (STDOUT) is overridden to just
-output to the string.
+Return the modified HTML output as a string.  This does I<not> override
+other methods of output, except in the case where the user hasn't
+specified any other method of output; then the default method (STDOUT)
+is overridden to just output to the string.
 
 =back 4
 
@@ -367,9 +354,11 @@ sub args {
     my $self = shift;
     my %args = ();
     my @arg_array = ();
-    if (@_ && @_ == 1)
+    if (@_ && @_ == 1
+	&& ref $_[0]
+	&& ref $_[0] eq 'ARRAY')
     {
-	# assume this is a reference to an array -- use the old style args
+	# this is a reference to an array -- use the old style args
 	my $aref = shift;
 	@arg_array = @{$aref};
     }
@@ -379,31 +368,29 @@ sub args {
     }
 
     if (%args) {
-	if ($self->{debug}) {
+	if ($self->{options}->{debug}) {
 	    print STDERR "========args(hash)========\n";
 	    print STDERR Dumper(%args);
 	}
 	foreach my $arg (keys %args) {
 	    if (defined $args{$arg}) {
-		if ($arg =~ /^-/) {
-		    $arg =~ s/^-//; # get rid of first dash
-		    $arg =~ s/^-//; # get rid of possible second dash
-		}
-		if ($self->{debug}) {
+		if ($self->{options}->{debug}) {
 		    print STDERR "--", $arg;
 		}
 		if ($arg eq 'tocmap') {
-		    self->read_tocmap($args{$arg});
+		    warn "The --tocmap option is deprecated, please do not use it.";
+		    $self->read_tocmap($args{$arg});
 		} else {
-		    $self->{$arg} = $args{$arg};
-		    if ($self->{debug}) {
+		    $self->{options}->{$arg} = $args{$arg};
+		    if ($self->{options}->{debug}) {
 			print STDERR " ", $args{$arg}, "\n";
 		    }
 		}
 	    }
 	}
     } elsif (@arg_array) {
-	if ($self->{debug}) {
+	warn "Using an array for arguments is deprecated, please change your code.";
+	if ($self->{options}->{debug}) {
 	    print STDERR "========args(array)========\n";
 	    print STDERR Dumper(@arg_array);
 	}
@@ -414,7 +401,7 @@ sub args {
 	    if ($arg =~ /^-/) {
 		$arg =~ s/^-//; # get rid of first dash
 		$arg =~ s/^-//; # get rid of possible second dash
-		if ($self->{debug}) {
+		if ($self->{options}->{debug}) {
 		    print STDERR "--", $arg;
 		}
 		if ($arg eq 'debug' || $arg eq 'inline'
@@ -427,8 +414,8 @@ sub args {
 		    || $arg eq 'to_string'
 		    || $arg eq 'useorg'
 		) {
-		    $self->{$arg} = 1;
-		    if ($self->{debug}) {
+		    $self->{options}->{$arg} = 1;
+		    if ($self->{options}->{debug}) {
 			print STDERR "=true\n";
 		    }
 		} elsif ($arg eq 'nodebug' || $arg eq 'noinline'
@@ -442,66 +429,88 @@ sub args {
 		    || $arg eq 'nouseorg'
 		) {
 		    $arg =~ s/^no//;
-		    $self->{$arg} = 0;
-		    if ($self->{debug}) {
+		    $self->{options}->{$arg} = 0;
+		    if ($self->{options}->{debug}) {
 			print STDERR " $arg=false\n";
 		    }
 		} elsif ($arg eq 'verbose') {
-		    $self->{quiet} = 0;
-		    if ($self->{debug}) {
+		    $self->{options}->{quiet} = 0;
+		    if ($self->{options}->{debug}) {
 			print STDERR " quiet=false\n";
 		    }
 		} elsif ($arg eq 'noverbose') {
-		    $self->{quiet} = 1;
-		    if ($self->{debug}) {
+		    $self->{options}->{quiet} = 1;
+		    if ($self->{options}->{debug}) {
 			print STDERR " quiet=true\n";
 		    }
 		} else {
 		    my $val = shift @arg_array;
-		    if ($self->{debug}) {
+		    if ($self->{options}->{debug}) {
 			print STDERR "=", $val, "\n";
 		    }
 		    # check the types
 		    if (defined $arg && defined $val) {
 			if ($arg eq 'infile') {	# arrays
 			    if ($val eq 'CLEAR') {
-				$self->{$arg} = [];
+				$self->{options}->{$arg} = [];
 			    } else {
-				push @{$self->{$arg}}, $val;
+				push @{$self->{options}->{$arg}}, $val;
 			    }
 			} elsif ($arg eq 'file') {	# alternate for 'infile'
 			    if ($val eq 'CLEAR') {
-				$self->{infile} = [];
+				$self->{options}->{infile} = [];
 			    } else {
-				push @{$self->{infile}}, $val;
+				push @{$self->{options}->{infile}}, $val;
 			    }
 			} elsif ($arg eq 'toc_entry'
 			    || $arg eq 'toc_end'
 			    || $arg eq 'toc_before'
 			    || $arg eq 'toc_after') {	# hashes
 			    if ($val eq 'CLEAR') {
-				$self->{$arg} = {};
+				$self->{options}->{$arg} = {};
 			    } else {
 				my ($k1, $v1) = split(/=/, $val);
-				$self->{$arg}->{$k1} = $v1;
+				$self->{options}->{$arg}->{$k1} = $v1;
 			    }
 			} elsif ($arg eq 'tocmap') {
+			    warn "The --tocmap option is deprecated, please do not use it.";
 			    self->read_tocmap($val);
 			} else {
-			    $self->{$arg} = $val;
+			    $self->{options}->{$arg} = $val;
 			}
 		    }
 		}
 	    }
 	}
     }
-    if ($self->{debug})
+    if ($self->{options}->{debug})
     {
     	print STDERR Dumper($self);
     }
 
     return 1;
 } # args
+
+=head2 Method -- setting
+
+    my $of = $toc->setting('outfile');
+
+Get the value of a given option.
+
+=cut
+sub setting ($$) {
+    my $self = shift;
+    my $option = shift;
+
+    if (exists $self->{options}->{$option})
+    {
+	return $self->{options}->{$option};
+    }
+    else
+    {
+	return undef;
+    }
+} # option
 
 =head2 Method -- generate_anchors
 
@@ -510,13 +519,12 @@ sub args {
     my $result_str = $toc->generate_anchors(to_string=>1);
 
 Generates anchors for the significant elements in the HTML documents.
-If one argument is given, it is assumed to be a reference to an array
-of arguments.  If more than one argument is given, it is assumed
-to be a hash of arguments.
-These arguments will be used to influence this method's behavour (and if
-arguments have already been set earlier, they also will be taken into account).
+Takes either a hash, or (deprecated) a reference to an array of
+arguments.  These arguments will be used to influence this method's
+behavour (and if arguments have already been set earlier, they also will
+be taken into account).
 
-See L<Method -- args> for the common options which can be passed into this
+See L</Method -- args> for the common options which can be passed into this
 method.
 
 The following arguments apply only to generating anchors.
@@ -533,103 +541,100 @@ are processing more than one file.  If you give '-' as the filename, then
 output will go to STDOUT.
 (default: STDOUT)
 
+=item set_file_strings
+
+set_file_strings => 1
+
+If B<set_file_strings> is set (even if B<file_strings> is not set) then
+the transformed output of each file is placed in
+$toc->setting('file_strings'), replacing any previous content there.
+Note that if this is set, it has the effect of quietly setting
+B<file_strings> for a subsequent call to generate_anchors or
+generate_toc.
+
+(this option is not supported in the old array format)
+
 =item useorg
 
 useorg => 1
 
 Use pre-existing backup files as the input source; that is, files of the
-form I<infile>.I<bak>  (see --infile and --bak).
+form I<infile>.I<bak>  (see B<infile> and B<bak>).
 
 =back 4
 
 =cut
-sub generate_anchors ($;$) {
+sub generate_anchors ($;%) {
     my $self = shift;
     $self->args(@_);
 
+    # Either read in all the files, or use the passed-in strings
+    my @file_content = $self->set_file_content();
+
+    # go through the content, updating it
     %{$self->{__anchors}} = ();
-    my @new_html;
-    my $file_needs_closing = 0;
-    my $to_string = $self->{to_string};
-    my $outhandle = *STDOUT;
-    if ($self->{outfile} && $self->{outfile} ne "-") {
-	open(FILEOUT, "> " . $self->{outfile})
-	    || die "Error: unable to open ", $self->{outfile}, ": $!\n";
-	$outhandle = *FILEOUT;
-	$file_needs_closing = 1;
-    }
     my $i = 0;
-    foreach my $fn (@{$self->{infile}}) {
-	$self->{__cur_file} = $fn;
-	my $infn = $fn;
-	my $bakfile = $fn . "." . $self->{bak};
-	if ($self->{useorg}
-	    && $self->{bak}
-	    && -e $bakfile) {
-	    # use the old backup files as source
-	    $infn = $bakfile;
-	}
-	@new_html = ();
-	my $html_str = '';
-	# if we have an in_string, use it for the
-	# content of the first file
-	if ($self->{in_string} && $i == 0)
-	{
-	    $html_str = $self->{in_string};
-	}
-	else
-	{
-	    open (FILE, $infn) ||
-		die "Error: unable to open ", $infn, ": $!\n";
-	    {
-		local $/;   # slurp entire file
-		$html_str = <FILE>;
-		close (FILE);
-	    }
-	}
-	push @new_html, $self->make_anchors(filename=>$infn,
+    foreach my $fn (@{$self->{options}->{infile}}) {
+	my $html_str = $file_content[$i];
+	$file_content[$i] = $self->make_anchors(filename=>$fn,
 	    input=>$html_str);
-	if ($self->{overwrite}) {
-	    if ($self->{bak}
-		&& !($self->{useorg} && -e $bakfile))
+	$i++;
+    }
+
+    # write the output, if need be
+    my $outhandle = *STDOUT;
+    if ($self->{options}->{overwrite}) {
+	$i = 0;
+	foreach my $fn (@{$self->{options}->{infile}}) {
+	    my $bakfile = $fn . "." . $self->{options}->{bak};
+	    if ($self->{options}->{bak}
+		&& !($self->{options}->{useorg} && -e $bakfile))
 	    {
 		# copy the file to a backup
 		print STDERR "Backing up ", $fn, " to ",
 		    $bakfile, "\n"
-		    unless $self->{quiet};
+		    unless $self->{options}->{quiet};
 		cp($fn, $bakfile);
 	    }
 	    open(FILEOUT, "> $fn")
 		|| die "Error: unable to open ", $fn, ": $!\n";
 	    $outhandle = *FILEOUT;
-	    $file_needs_closing = 1;
 	    print STDERR "Overwriting Anchors to ", $fn, "\n"
-		unless $self->{quiet};
-	    print $outhandle @new_html;
+		unless $self->{options}->{quiet};
+	    print $outhandle $file_content[$i];
+	    close(FILEOUT);
+	    $i++;
 	}
-	elsif ($self->{outfile} && $self->{outfile} ne "-") {
-	    print STDERR "Writing Anchors to ", $self->{outfile}, "\n"
-		unless $self->{quiet};
-	    print $outhandle @new_html;
-	}
-	elsif ($self->{to_string} && !$self->{outfile})
-	{
-	    # don't print to anything
-	}
-	else
-	{
-	    print $outhandle @new_html;
-	}
-	$i++;
     }
-    print STDERR "$i files processed.\n"
-	unless $self->{quiet};
-    if ($file_needs_closing) {
+    elsif ($self->{options}->{outfile}
+	    && $self->{options}->{outfile} ne "-") {
+	open(FILEOUT, "> " . $self->{options}->{outfile})
+	    || die "Error: unable to open ", $self->{options}->{outfile}, ": $!\n";
+	$outhandle = *FILEOUT;
+	print STDERR "Writing Anchors to ", $self->{options}->{outfile}, "\n"
+	    unless $self->{options}->{quiet};
+	print $outhandle @file_content;
 	close($outhandle);
     }
+    elsif ($self->{options}->{to_string} && !$self->{options}->{outfile})
+    {
+	# don't print to anything
+    }
+    elsif ($self->{options}->{outfile})
+    {
+	print $outhandle @file_content;
+    }
 
-    if ($self->{to_string}) {
-	return join('', @new_html);
+    # always set file strings if the option is on
+    if ($self->{options}->{set_file_strings})
+    {
+	$self->{options}->{file_strings} = \@file_content;
+    }
+    print STDERR "$i files processed.\n"
+	unless $self->{options}->{quiet};
+
+    if ($self->{options}->{to_string}) {
+	return join('', @file_content);
     }
     return 1;
 } # generate_anchors
@@ -643,13 +648,13 @@ sub generate_anchors ($;$) {
 	to_string=>1);
 
 Generates a Table of Contents (ToC) for the significant elements in the
-HTML documents.  If one argument is given, it is assumed to be a
-reference to an array of arguments.  If more than one argument is given,
-it is assumed to be a hash of arguments.  These arguments will be used
-to influence this method's behavour (and if arguments have already been
-set earlier, they also will be taken into account).
+HTML documents.  Takes either a hash, or (deprecated) a reference to an
+array of arguments, which will be used in invocations of other methods.
+These arguments will be used to influence this method's behavour (and if
+arguments have already been set earlier, they also will be taken into
+account).
 
-See L<Method -- args> for the common options which can be passed into this
+See L</Method -- args> for the common options which can be passed into this
 method.
 
 The following arguments apply only to generating a table-of-contents.
@@ -660,7 +665,7 @@ The following arguments apply only to generating a table-of-contents.
 
 entrysep => I<string>
 
-Separator string for non-E<lt>liE<gt> item entries
+Separator string for non-<li> item entries
 (default: ", ")
 
 =item footer
@@ -680,13 +685,23 @@ File containing header text for ToC.
 inline => 1
 
 Put ToC in document at a given point.
-See L<Inlining the ToC> for more information.
+See L</Inlining the ToC> for more information.
 
 =item ol
 
 ol => 1
 
 Use an ordered list for level 1 ToC entries.
+
+=item ol_num_levels
+
+ol_num_levels => 2
+
+The number of levels deep the OL listing will go if B<ol> is true.
+If set to zero, will use an ordered list for all levels.
+(default:1)
+
+(this option is not supported in the old array format)
 
 =item textonly
 
@@ -698,14 +713,65 @@ Use only text content in significant elements.
 
 title => I<string>
 
-Title for ToC page (if not using --header or --inline or --toc_only)
+Title for ToC page (if not using B<header> or B<inline> or B<toc_only>)
 (default: "Table of Contents")
+
+=item toc_after
+
+toc_after => \%toc_after_data
+
+%toc_after_data = { I<tag1> => I<suffix1>,
+    I<tag2> => I<suffix2>
+    };
+
+toc_after => { H2=>'</em>' }
+
+For defining layout of significant elements in the ToC.
+
+If the arguments are in hash form, this expects a reference to a hash of
+tag=>suffix pairs.
+
+The I<tag> is the HTML tag which marks the start of the element.  The
+I<suffix> is what is required to be appended to the Table of Contents
+entry generated for that tag.
+
+'--toc_after', 'I<tag>=I<suffix>' (array version, deprecated)
+
+If the arguments are in arrayref form, this is a cumulative argument;
+each instance of --toc_after, I<value> in the array adds another pair to
+the internal hash; if you wish to clear it, give
+C<'--toc_after', 'CLEAR'> to do so.
+
+(default: undefined)
+
+=item toc_before
+
+toc_before => \%toc_before_data
+
+%toc_before_data = { I<tag1> => I<prefix1>,
+    I<tag2> => I<prefix2>
+    };
+
+toc_before=>{ H2=>'<em>' }
+
+For defining the layout of significant elements in the ToC.  The I<tag>
+is the HTML tag which marks the start of the element.  The I<prefix> is
+what is required to be prepended to the Table of Contents entry
+generated for that tag.
+
+'--toc_before', 'I<tag>=I<prefix>' (array version, deprecated)
+
+For the array-ref form of arguments, this is a cumulative hash argument;
+if you wish to clear it, give
+C<'--toc_before', 'CLEAR'> to do so.
+
+(default: undefined)
 
 =item toc_file
 
 toc_file => I<file>
 
-File to write the output to.  This is where the ToC goes.
+File to write the table-of-contents output to.
 If you give '-' as the filename, then output will go to STDOUT.
 (default: STDOUT)
 
@@ -714,8 +780,7 @@ If you give '-' as the filename, then output will go to STDOUT.
 toclabel => I<string>
 
 HTML text that labels the ToC.  Always used.
-(default: "E<lt>H1E<gt>Table of ContentsE<lt>/H1E<gt>")
-
+(default: "<H1>Table of Contents</H1>")
 
 =item toc_tag
 
@@ -732,8 +797,10 @@ the comment marks, for example: "!--toc--" (default:BODY)
 
 toc_tag_replace => 1
 
-In conjunction with --toc_tag, this is a flag to say whether the given tag
+In conjunction with B<toc_tag>, this is a flag to say whether the given tag
 should be replaced, or if the ToC should be put after the tag.
+This can be useful if your toc_tag is a comment and you don't need it
+after you have the ToC in place.
 (default:false)
 
 =item toc_only
@@ -741,13 +808,13 @@ should be replaced, or if the ToC should be put after the tag.
 toc_only => 1
 
 Output only the Table of Contents, that is, the Table of Contents plus
-the toclabel.  If there is a --header or a --footer, these will also be
+the toclabel.  If there is a B<header> or a B<footer>, these will also be
 output.
 
-If --toc_only is false then if there is no --header, and --inline is not
-true, then a suitable HTML page header will be output, and if there is
-no --footer and --inline is not true, then a HTML page footer will be
-output.
+If B<toc_only> is false then if there is no B<header>, and B<inline> is
+not true, then a suitable HTML page header will be output, and if there
+is no B<footer> and B<inline> is not true, then a HTML page footer will
+be output.
 
 (default:false)
 
@@ -758,133 +825,109 @@ sub generate_toc ($;$) {
     my $self = shift;
     $self->args(@_);
 
+    # Either read in all the files, or use the passed-in strings
+    my @file_content = $self->set_file_content();
+
     my @toc = ();
     # put the header at the start of the ToC if there is one
-    if ($self->{header}) {
-	open(HEADER, $self->{header})
-	    || die "Error: unable to open ", $self->{header}, ": $!\n";
+    if ($self->{options}->{header}) {
+	open(HEADER, $self->{options}->{header})
+	    || die "Error: unable to open ", $self->{options}->{header}, ": $!\n";
 	push @toc, <HEADER>;
 	close (HEADER);
     }
     # if we are outputing a standalone page,
     # then make sure it can stand
-    elsif (!$self->{toc_only}
-	&& !$self->{inline}) {
+    elsif (!$self->{options}->{toc_only}
+	&& !$self->{options}->{inline}) {
 
 	push @toc, qq|<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML//EN">\n|,
 			 "<html>\n",
 			 "<head>\n";
-	push @toc, "<title>", $self->{title}, "</title>\n"  if $self->{title};
+	push @toc, "<title>", $self->{options}->{title}, "</title>\n"  if $self->{options}->{title};
 	push @toc, "</head>\n",
 	"<body>\n";
     }
 
     # start the ToC with the ToC label
-    if ($self->{toclabel}) {
-	push @toc, $self->{toclabel};
+    if ($self->{options}->{toclabel}) {
+	push @toc, $self->{options}->{toclabel};
     }
     $self->{__prevlevel} = 0;
+    $self->{__tags} = [];
+    $self->{__tag_level} = [];
     my $i = 0;
     my $bakfile;
-    foreach my $fn (@{$self->{infile}}) {
+    foreach my $fn (@{$self->{options}->{infile}}) {
 	$self->{__cur_file} = $fn;
 	my $infn = $fn;
-	$bakfile = $fn . "." . $self->{bak};
-	if ($self->{useorg}
-	    && $self->{bak}
-	    && -e $bakfile) {
-	    # use the old backup files as source
-	    $infn = $bakfile;
-	}
-	my $html_str = '';
-	# if we have an in_string, use it for the
-	# content of the first file
-	if ($self->{in_string} && $i == 0)
-	{
-	    $html_str = $self->{in_string};
-	}
-	else
-	{
-	    open (FILE, $infn) ||
-		die "Error: unable to open ", $infn, ": $!\n";
-	    {
-		local $/;   # slurp entire file
-		$html_str = <FILE>;
-		close (FILE);
-	    }
-	}
+	$bakfile = $fn . "." . $self->{options}->{bak};
+	my $html_str = $file_content[$i];
 	push @toc, $self->make_toc(input=>$html_str,
 	    filename=>$infn);
 	$i++;
     }
     print STDERR "$i files processed.\n"
-	unless $self->{quiet};
+	unless $self->{options}->{quiet};
 
     ## Close up open elements in ToC
-    for ($i=$self->{__prevlevel}; $i > 0; $i--) {
-	if ($self->{ol} && $i == 1) {
-	    push @toc, "</ol>\n";
-	} else {
-	    push @toc, "</ul>\n";
-	}
-	if ($i > 1) {
-	    push @toc, "</li>";
-	}
+    while (@{$self->{__tags}})
+    {
+	push @toc, $self->close_tag('');
     }
 
     # add the footer, if there is one
-    if ($self->{footer}) {
-	open(FOOTER, $self->{footer})
-	    || die "Error: unable to open ", $self->{footer}, ": $!\n";
+    if ($self->{options}->{footer}) {
+	open(FOOTER, $self->{options}->{footer})
+	    || die "Error: unable to open ", $self->{options}->{footer}, ": $!\n";
 	push @toc, <FOOTER>;
 	close (FOOTER);
     }
     # if we are outputing a standalone page,
     # then make sure it can stand
-    elsif (!$self->{toc_only}
-	&& !$self->{inline}) {
+    elsif (!$self->{options}->{toc_only}
+	&& !$self->{options}->{inline}) {
 
-	push @toc, "</body>\n",
-			 "</html>\n";
+	push @toc, "</body>\n", "</html>\n";
     }
 
-    my $toc_str = join "", @toc;
+    my $toc_str = join '', @toc;
 
     #
     #  Sent the full ToC to its final destination
     #
     my $file_needs_closing = 0;
     my $tochandle = *STDOUT;
-    if ($self->{toc_file} && $self->{toc_file} ne "-") {
-	open(TOCOUT, "> " . $self->{toc_file})
-	    || die "Error: unable to open ", $self->{toc_file}, ": $!\n";
+    if ($self->{options}->{toc_file} && $self->{options}->{toc_file} ne "-") {
+	open(TOCOUT, "> " . $self->{options}->{toc_file})
+	    || die "Error: unable to open ", $self->{options}->{toc_file}, ": $!\n";
 	$tochandle = *TOCOUT;
 	$file_needs_closing = 1;
     }
-    if ($self->{inline}) {
+    if ($self->{options}->{inline}) {
 	# either make a new output which is a modified copy
 	# of the first file, or overwrite the first file.
-	my $first_file = $self->{infile}->[0];
-	$bakfile = $first_file . "." . $self->{bak};
+	my $first_file = $self->{options}->{infile}->[0];
+	$bakfile = $first_file . "." . $self->{options}->{bak};
 	my @new_html;
-	if ($self->{useorg} && $self->{bak} && -e $bakfile) {
+	if ($self->{options}->{useorg} && $self->{options}->{bak} && -e $bakfile) {
 	    @new_html = $self->put_toc_inline(toc_str=>$toc_str,
 		filename=>$bakfile,
-		in_string=>$self->{in_string});
+		in_string=>$self->{options}->{in_string});
 	} else {
 	    @new_html = $self->put_toc_inline(toc_str=>$toc_str,
 		filename=>$first_file,
-		in_string=>$self->{in_string});
+		in_string=>$self->{options}->{in_string});
 	}
-	$toc_str = join "", @new_html;
-	if ($self->{overwrite}) {
-	    if ($self->{bak}
-		&& !($self->{useorg} && -e $bakfile))
+	$toc_str = join '', @new_html;
+	if ($self->{options}->{overwrite}) {
+	    if ($self->{options}->{bak}
+		&& !($self->{options}->{useorg} && -e $bakfile))
 	    {
 		# copy the file to a backup
 		print STDERR "Backing up ", $first_file, " to ",
 		    $bakfile, "\n"
-		    unless $self->{quiet};
+		    unless $self->{options}->{quiet};
 		cp($first_file, $bakfile);
 	    }
 	    open(TOCOUT, "> $first_file")
@@ -892,29 +935,30 @@ sub generate_toc ($;$) {
 	    $tochandle = *TOCOUT;
 	    $file_needs_closing = 1;
 	    print STDERR "Overwriting ToC to ", $first_file, "\n"
-		unless $self->{quiet};
+		unless $self->{options}->{quiet};
 	    print $tochandle $toc_str;
 	}
-	elsif ($self->{toc_file} && $self->{toc_file} ne "-") {
-	    print STDERR "Writing Inline ToC to ", $self->{toc_file}, "\n"
-		unless $self->{quiet};
+	elsif ($self->{options}->{toc_file}
+	    && $self->{options}->{toc_file} ne "-") {
+	    print STDERR "Writing Inline ToC to ", $self->{options}->{toc_file}, "\n"
+		unless $self->{options}->{quiet};
 	    print $tochandle $toc_str;
 	}
-	elsif ($self->{to_string} && !$self->{toc_file})
+	elsif ($self->{options}->{to_string} && !$self->{options}->{toc_file})
 	{
 	    # just send to string, don't print anything
 	}
-	else
+	elsif ($self->{options}->{toc_file})
 	{
 	    print $tochandle $toc_str;
 	}
     } else {
-	if ($self->{toc_file} && $self->{toc_file} ne "-") {
-	    print STDERR "Writing ToC to ", $self->{toc_file}, "\n"
-		unless $self->{quiet};
+	if ($self->{options}->{toc_file} && $self->{options}->{toc_file} ne "-") {
+	    print STDERR "Writing ToC to ", $self->{options}->{toc_file}, "\n"
+		unless $self->{options}->{quiet};
 	    print $tochandle $toc_str;
 	}
-	elsif ($self->{to_string} && !$self->{toc_file})
+	elsif ($self->{options}->{to_string} && !$self->{options}->{toc_file})
 	{
 	    # just send to string, don't print anything
 	}
@@ -927,7 +971,7 @@ sub generate_toc ($;$) {
 	close($tochandle);
     }
 
-    if ($self->{to_string}) {
+    if ($self->{options}->{to_string}) {
 	return $toc_str;
     }
     return 1;
@@ -942,47 +986,49 @@ sub generate_toc ($;$) {
 sub init_our_data ($) {
     my $self = shift;
 
-    $self->{debug} = 0;
+    $self->{options} = {};
+    $self->{options}->{debug} = 0;
     #
     # All the options (alphabetical)
     #
-    $self->{bak} = 'org';
-    $self->{entrysep} = ', ';
-    $self->{footer} = '';
-    $self->{inline} = 0;
-    $self->{header} = '';
-    $self->{infile} = [];	# names of files to be processed
-    $self->{notoc_match} = 'class="notoc"';
-    $self->{ol} = 0;
-    $self->{overwrite} = 0;
-    $self->{outfile} = '';
-    $self->{quiet} = 0;
-    $self->{textonly} = 0;
-    $self->{title} = 'Table of Contents';
-    $self->{toclabel} = '<h1>Table of Contents</h1>';
-    $self->{tocmap} = '';
-    $self->{toc_file} = '';
-    $self->{toc_tag} = '^BODY';
-    $self->{toc_tag_replace} = 0;
-    $self->{toc_only} = 0;
+    $self->{options}->{bak} = 'org';
+    $self->{options}->{entrysep} = ', ';
+    $self->{options}->{footer} = '';
+    $self->{options}->{inline} = 0;
+    $self->{options}->{header} = '';
+    $self->{options}->{infile} = [];	# names of files to be processed
+    $self->{options}->{notoc_match} = 'class="notoc"';
+    $self->{options}->{ol} = 0;
+    $self->{options}->{ol_num_levels} = 1;
+    $self->{options}->{overwrite} = 0;
+    $self->{options}->{outfile} = '-';
+    $self->{options}->{quiet} = 0;
+    $self->{options}->{textonly} = 0;
+    $self->{options}->{title} = 'Table of Contents';
+    $self->{options}->{toclabel} = '<h1>Table of Contents</h1>';
+    $self->{options}->{tocmap} = '';
+    $self->{options}->{toc_file} = '-';
+    $self->{options}->{toc_tag} = '^BODY';
+    $self->{options}->{toc_tag_replace} = 0;
+    $self->{options}->{toc_only} = 0;
     # define TOC entry elements
-    $self->{toc_entry} = {
+    $self->{options}->{toc_entry} = {
     	'H1'=>1,
 	'H2'=>2,
     };
     # TOC entry element terminators
-    $self->{toc_end} = {
+    $self->{options}->{toc_end} = {
     	'H1'=>'/H1',
 	'H2'=>'/H2',
     };
     # before text for TOC entries
-    $self->{toc_before} = {};
+    $self->{options}->{toc_before} = {};
     # after text for TOC entries
-    $self->{toc_after} = {};
+    $self->{options}->{toc_after} = {};
 
-    $self->{useorg} = 0;
+    $self->{options}->{useorg} = 0;
 
-    if ($self->{debug})
+    if ($self->{options}->{debug})
     {
     	print STDERR Dumper($self);
     }
@@ -1011,10 +1057,10 @@ sub read_tocmap ($$) {
 	|| die "Error: unable to open ", $tocmap, ": $!\n";
 
     # clear the old values of toc_entry, toc_end, toc_before and toc_after
-    %{$self->{"toc_entry"}} = ();
-    %{$self->{"toc_end"}} = ();
-    %{$self->{"toc_before"}} = ();
-    %{$self->{"toc_after"}} = ();
+    %{$self->{options}->{"toc_entry"}} = ();
+    %{$self->{options}->{"toc_end"}} = ();
+    %{$self->{options}->{"toc_before"}} = ();
+    %{$self->{options}->{"toc_after"}} = ();
     while (<TOCMAP>) {
 	next if /^\s*#/ || /^\s*$/;	# Skip comment/blank lines
 	s/#.*$//;  s/\s//g;		# Remove eol comments and whitespaces
@@ -1026,16 +1072,16 @@ sub read_tocmap ($$) {
 		"2nd field must be a non-zero number: line $.\n";
 	}
 	# store ToC tag and level
-	$self->{toc_entry}->{$array[0]} = $array[1];
+	$self->{options}->{toc_entry}->{$array[0]} = $array[1];
 	if ($array[2]) {		# Store end delimiter
-	    $self->{toc_end}->{$array[0]} = $array[2];
+	    $self->{options}->{toc_end}->{$array[0]} = $array[2];
 	} else {
-	    $self->{toc_end}->{$array[0]} = "/" . $array[0];
+	    $self->{options}->{toc_end}->{$array[0]} = "/" . $array[0];
 	}
 	if ($array[3]) {		# Store before/after text
 	    @befaft = split(/,/, $array[3]);
-	    $self->{toc_before}->{$array[0]} = $befaft[0];
-	    $self->{toc_after}->{$array[0]} = $befaft[1];
+	    $self->{options}->{toc_before}->{$array[0]} = $befaft[0];
+	    $self->{options}->{toc_after}->{$array[0]} = $befaft[1];
 	}
     }
     close(TOCMAP);
@@ -1060,6 +1106,53 @@ sub cp ($$) {
     close(SRC);
     close(DST);
 }
+
+sub set_file_content {
+    my $self = shift;
+
+    # Either read in all the files, or use the passed-in strings
+    my @file_content;
+    my $i = 0;
+    if (exists $self->{options}->{file_strings}
+	&& defined $self->{options}->{file_strings}
+	&& @{$self->{options}->{file_strings}})
+    {
+	@file_content = @{$self->{options}->{file_strings}};
+    }
+    else
+    {	# read in the files
+	$i = 0;
+	foreach my $fn (@{$self->{options}->{infile}}) {
+	    my $infn = $fn;
+	    my $bakfile = $fn . "." . $self->{options}->{bak};
+	    if ($self->{options}->{useorg}
+		&& $self->{options}->{bak}
+		&& -e $bakfile) {
+		# use the old backup files as source
+		$infn = $bakfile;
+	    }
+	    # if we have an in_string, use it for the
+	    # content of the first file
+	    my $content = '';
+	    if ($self->{options}->{in_string} && $i == 0)
+	    {
+		$content = $self->{options}->{in_string};
+	    }
+	    else
+	    {
+		open (FILE, $infn) ||
+		    die "Error: unable to open ", $infn, ": $!\n";
+		{
+		    local $/;   # slurp entire file
+		    $content = <FILE>;
+		    close (FILE);
+		}
+	    }
+	    push @file_content, $content;
+	}
+    }
+    return @file_content;
+} # set_file_content
 
 #---------------------------------------------------------------#
 # generate_anchors related subroutines
@@ -1112,6 +1205,7 @@ sub make_anchor_name ($$) {
 #--------------------------------#
 # Name: make_anchors
 # Makes the anchors for one file
+# returns a string
 sub make_anchors ($%) {
     my $self = shift;
     my %args = (
@@ -1124,7 +1218,7 @@ sub make_anchors ($%) {
 
     my @newhtml = ();
 
-    print STDERR "Making anchors for $infile ...\n" unless $self->{quiet};
+    print STDERR "Making anchors for $infile ...\n" unless $self->{options}->{quiet};
 
     # parse the HTML
     my $hp = new HTML::SimpleParse();
@@ -1143,7 +1237,7 @@ sub make_anchors ($%) {
     my $tok;
     my $next_tok;
     my $i;
-    my $notoc = $self->{notoc_match};
+    my $notoc = $self->{options}->{notoc_match};
     my @tree = $hp->tree();
     while (@tree) {
 	$tok = shift @tree;
@@ -1156,15 +1250,15 @@ sub make_anchors ($%) {
 	$level = 0;
 	$is_title = 0;
 	# check if tag included in TOC
-	foreach my $key (keys %{$self->{toc_entry}}) {
+	foreach my $key (keys %{$self->{options}->{toc_entry}}) {
 	    if ($tok->{content} =~ /$key/i
 		&& (!$notoc
 		    || $tok->{content} !~ /$notoc/)) {
 		$tag = $key;
 		# level of significant element
-		$level = abs($self->{toc_entry}->{$key});
+		$level = abs($self->{options}->{toc_entry}->{$key});
 		# End tag of significant element
-		$endtag = $self->{toc_end}->{$key};
+		$endtag = $self->{options}->{toc_end}->{$key};
 		last;
 	    }
 	}
@@ -1235,7 +1329,7 @@ sub make_anchors ($%) {
 		push @newhtml, $hp->execute($tok);
 		last if $tok->{content} =~ m|$endtag|i;
 		$content .= $hp->execute($tok)
-		    unless $self->{textonly}
+		    unless $self->{options}->{textonly}
 			|| $tok->{content} =~ m%/?(hr|p|a|img)%i;
 	    }
 	    else {
@@ -1246,7 +1340,7 @@ sub make_anchors ($%) {
 	$self->{__prevlevel} = $level;
     }
 
-    return @newhtml;
+    return join('', @newhtml);
 } # make_anchors
 
 #---------------------------------------------------------------#
@@ -1270,7 +1364,7 @@ sub make_toc ($%) {
     my $toc_str = "";
     my @toc = ();
 
-    print STDERR "Making ToC from $infile ...\n" unless $self->{quiet};
+    print STDERR "Making ToC from $infile ...\n" unless $self->{options}->{quiet};
 
     # parse the HTML
     my $hp = new HTML::SimpleParse();
@@ -1291,7 +1385,7 @@ sub make_toc ($%) {
     my $name = "NOTOC"; # if no anchor is found...
     my $is_title;
     my $found_title = 0;
-    my $notoc = $self->{notoc_match};
+    my $notoc = $self->{options}->{notoc_match};
     # go through the HTML
     my $tok;
     my @tree = $hp->tree();
@@ -1303,12 +1397,12 @@ sub make_toc ($%) {
 	if ($tok->{type} eq 'starttag')
 	{
 	    # check if tag included in TOC
-	    foreach my $key (keys %{$self->{toc_entry}}) {
+	    foreach my $key (keys %{$self->{options}->{toc_entry}}) {
 		if ($tok->{content} =~ /^$key/i
 		    && (!$notoc
 			|| $tok->{content} !~ /$notoc/)) {
 		    $tag = $key;
-		    if ($self->{debug}) {
+		    if ($self->{options}->{debug}) {
 			print STDERR "============\n";
 			print STDERR "key = $key ";
 			print STDERR "tok->content = '", $tok->{content}, "' ";
@@ -1316,18 +1410,18 @@ sub make_toc ($%) {
 			print STDERR "\n============\n";
 		    }
 		    # level of significant element
-		    $level = abs($self->{toc_entry}->{$key});
+		    $level = abs($self->{options}->{toc_entry}->{$key});
 		    # no <li> used in ToC listing
-		    $noli = $self->{toc_entry}->{$key} < 0;
+		    $noli = $self->{options}->{toc_entry}->{$key} < 0;
 		    # End tag of significant element
-		    $endtag = $self->{toc_end}->{$key};
-		    if (defined $self->{toc_before}->{$key}) {
-			$before = $self->{toc_before}->{$key};
+		    $endtag = $self->{options}->{toc_end}->{$key};
+		    if (defined $self->{options}->{toc_before}->{$key}) {
+			$before = $self->{options}->{toc_before}->{$key};
 		    } else {
 			$before = "";
 		    }
-		    if (defined $self->{toc_after}->{$key}) {
-			$after = $self->{toc_after}->{$key};
+		    if (defined $self->{options}->{toc_after}->{$key}) {
+			$after = $self->{options}->{toc_after}->{$key};
 		    } else {
 			$after = "";
 		    }
@@ -1338,7 +1432,7 @@ sub make_toc ($%) {
 	if (!$level) {
 	    next;
 	}
-	if ($self->{debug}) {
+	if ($self->{options}->{debug}) {
 	    print STDERR "Chosen tag:$tag\n";
 	}
 
@@ -1360,7 +1454,7 @@ sub make_toc ($%) {
 	    # Text
 	    if ($tok->{type} eq 'text') {
 		$content .= $tok->{content};
-		if ($self->{debug}) {
+		if ($self->{options}->{debug}) {
 		    print STDERR "tok-content = ", $tok->{content}, "\n";
 		    print STDERR "content = $content\n";
 		}
@@ -1376,20 +1470,20 @@ sub make_toc ($%) {
 	    } elsif ($tok->{type} eq 'starttag'
 		    || $tok->{type} eq 'endtag')
 	    {	# Tag
-		if ($self->{debug}) {
-		    print STDERR "file = ", $self->{__cur_file},
+		if ($self->{options}->{debug}) {
+		    print STDERR "file = ", $self->{options}->{__cur_file},
 			" tag = $tag, endtag = '$endtag",
 			"' tok-type = ", $tok->{type},
 			" tok-content = '", $tok->{content}, "'\n";
 		}
 		last if $tok->{content} =~ m#$endtag#i;
 		$content .= $hp->execute($tok)
-		    unless $self->{textonly}
+		    unless $self->{options}->{textonly}
 			|| $tok->{content} =~ m#/?(hr|p|a|img)#i;
 	    }
 
 	}
-	if ($self->{debug}) {
+	if ($self->{options}->{debug}) {
 	    print STDERR "Chosen content:'$content'\n";
 	}
 
@@ -1406,30 +1500,39 @@ sub make_toc ($%) {
 	my $i;
 	if ($level < $self->{__prevlevel}) {
 	    # close open levels
-	    for ($i=$level; $i < $self->{__prevlevel}; $i++) {
-		if ($self->{ol} && $i == 1) {
-		    $toc_str .= "\n</ol>";
-		}
-		else {
-		    $toc_str .= "\n</ul>";
-		}
-		if ($i > 0) {
-		    $toc_str .= "</li>";
-		}
+	    my $open_level = @{$self->{__tag_level}}[$#{$self->{__tag_level}}];
+	    my $open_tag = @{$self->{__tags}}[$#{$self->{__tags}}];
+	    while (defined $open_tag && $open_level > $level)
+	    {
+		$toc_str .= "\n";
+		$toc_str .= $self->get_tag($open_tag, level=>$level, tag_type=>'end');
+		$open_level = @{$self->{__tag_level}}[$#{$self->{__tag_level}}];
+		$open_tag = @{$self->{__tags}}[$#{$self->{__tags}}];
 	    }
 	} elsif ($level > $self->{__prevlevel}) {
 	    # open closed levels
-	    for ($i=$level; $i > $self->{__prevlevel}; $i--) {
-		if ($self->{ol} && $i == $level
-		    && $self->{__prevlevel} == 0) {
-		    $toc_str .= "\n<ol>";
+	    for ($i = ($self->{__prevlevel} + 1); $i <= $level; $i++) {
+		my $open_tag = @{$self->{__tags}}[$#{$self->{__tags}}];
+# if we've already just opened a ul/ol
+# then insert an "invisible" list item to correctly
+# nest the lists
+		if ($i > 1
+		    && defined $open_tag
+		    && ($open_tag eq 'ul' || $open_tag eq 'ol')) {
+		    $toc_str .= "\n";
+		    $toc_str .= $self->get_tag('li', level=>$i - 1, inside_tag=>' style="list-style: none;"');
+		}
+		if ($self->{options}->{ol}
+		    && ($i <= $self->{options}->{ol_num_levels}
+			|| $self->{options}->{ol_num_levels} == 0)
+		    ) {
+		    # ordered list for this level
+		    $toc_str .= "\n";
+		    $toc_str .= $self->get_tag('ol', level=>$i);
 		}
 		else {
-		    if (!($self->{__prevlevel} == 0
-			&& $i == $level)) {
-			$toc_str .= "<li style=\"list-style: none;\">";
-		    }
-		    $toc_str .= "\n<ul>";
+		    $toc_str .= "\n";
+		    $toc_str .= $self->get_tag('ul', level=>$i);
 		}
 	    }
 	    $levelopen = 1;	# Flag for use with $noli
@@ -1439,9 +1542,10 @@ sub make_toc ($%) {
 
 	# Set anchor string
 	$tmp  = '';
-	$tmp .= $self->{entrysep}  if $noli && !$levelopen;
-	$tmp .= "\n<li>"  unless $noli && !$levelopen;
-	if ($self->{inline} and $self->{infile}->[0] eq $self->{__cur_file})
+	$tmp .= $self->{options}->{entrysep}  if $noli && !$levelopen;
+#	$tmp .= "\n<li>"  unless $noli && !$levelopen;
+	$tmp .= "\n" . $self->get_tag('li', level=>$level)  unless $noli && !$levelopen;
+	if ($self->{options}->{inline} and $self->{options}->{infile}->[0] eq $self->{__cur_file})
 	{
 	    $tmp .= join('',
 			 qq|<a href="|,
@@ -1456,7 +1560,7 @@ sub make_toc ($%) {
 			 !$is_title ? qq|#$name| : '',
 			 qq|">$content</a>|);
 	}
-	$tmp .= "</li>\n"  unless $noli && !$levelopen;
+#	$tmp .= "</li>\n"  unless $noli && !$levelopen;
 	$toc_str .= $tmp;
 
 	$name = 'NOTOC';
@@ -1466,6 +1570,107 @@ sub make_toc ($%) {
 
     return $toc_str;
 } # make_toc
+
+# Get the tags for the TOC (that is, li, ul, ol)
+#
+# output the tag wanted (add the <> and the / if necessary)
+# - output in lower or upper case
+# - do tag-related processing
+# options:
+#   tag_type=>'start' | tag_type=>'end' | tag_type=>'empty'
+#   (default start)
+#   inside_tag=>string (default empty)
+#   tag_level=>num (what level of the TOC list we're on)
+#
+# (code derived from txt2html)
+sub get_tag ($$;%) {
+    my $self	    = shift;
+    my $in_tag	    = shift;
+    my %args = (
+	level=>0,
+	tag_type=>'start',
+	inside_tag=>'',
+	@_
+    );
+    my $inside_tag  = $args{inside_tag};
+    my $level  = $args{level};
+
+    my $open_tag = @{$self->{__tags}}[$#{$self->{__tags}}];
+    if (!defined $open_tag)
+    {
+	$open_tag = '';
+    }
+    # close any open tags that need closing
+    # Note that we only have to check for the structural tags we make,
+    # not every possible HTML tag
+    my $tag_prefix = '';
+    if ($open_tag eq 'li' and $in_tag eq 'li'
+	and $args{tag_type} ne 'end')
+    {
+	# close a li before the next li
+	$tag_prefix = $self->close_tag('li');
+    }
+    elsif ($open_tag eq 'li' and $in_tag =~ /(ul|ol)/
+	and $args{tag_type} eq 'end')
+    {
+	# close the li before the list closes
+	$tag_prefix = $self->close_tag('li');
+    }
+
+    my $out_tag = $in_tag;
+    if ($args{tag_type} eq 'end')
+    {
+	$out_tag = $self->close_tag($in_tag);
+    }
+    else
+    {
+	if ($args{tag_type} eq 'empty')
+	{
+	    $out_tag = "<${out_tag}${inside_tag}/>";
+	}
+	else
+	{
+	    push @{$self->{__tags}}, $in_tag;
+	    push @{$self->{__tag_level}}, $level;
+	    $out_tag = "<${out_tag}${inside_tag}>";
+	}
+    }
+    $out_tag = $tag_prefix . $out_tag;
+    if ($self->{options}->{debug})
+    {
+	print STDERR "get_tag: open_tag = '${open_tag}', in_tag = '${in_tag}', tag_type = ", $args{tag_type}, ", inside_tag = '${inside_tag}', out_tag = '$out_tag'\n";
+    }
+
+    return $out_tag;
+} # get_tag
+
+# close the open tag
+#
+# (code derived from txt2html)
+sub close_tag ($$) {
+    my $self	    = shift;
+    my $in_tag	    = shift;
+
+    my $open_tag = @{$self->{__tags}}[$#{$self->{__tags}}];
+    if (!$in_tag)
+    {
+	$in_tag = $open_tag;
+    }
+    my $out_tag = $in_tag;
+    $out_tag = "<\/${out_tag}>";
+    if (defined $open_tag
+	&& $open_tag eq $in_tag)
+    {
+	pop @{$self->{__tags}};
+	pop @{$self->{__tag_level}};
+    }
+    if ($self->{options}->{debug})
+    {
+	print STDERR "close_tag: open_tag = '${open_tag}', in_tag = '${in_tag}', out_tag = '$out_tag'\n";
+    }
+
+    return $out_tag . "\n";
+}
 
 #--------------------------------#
 # Name: put_toc_inline
@@ -1488,7 +1693,7 @@ sub put_toc_inline ($) {
     my @newhtml = ();
 
     print STDERR "Putting ToC in place from $infile ...\n"
-	unless $self->{quiet};
+	unless $self->{options}->{quiet};
     if ($args{in_string}) # use input string, not file
     {
 	$html_str = $args{in_string};
@@ -1508,7 +1713,7 @@ sub put_toc_inline ($) {
     $hp->text($html_str);
     $hp->parse();
 
-    my $toc_tag = $self->{toc_tag};
+    my $toc_tag = $self->{options}->{toc_tag};
 
     my $toc_done = 0;
     # go through the HTML
@@ -1526,7 +1731,7 @@ sub put_toc_inline ($) {
 		&& $tok->{content} =~ m|$toc_tag|i) {
 		# some tags need to be preserved, with the ToC put after,
 		# while others need to be replaced
-		if (!$self->{toc_tag_replace}) {
+		if (!$self->{options}->{toc_tag_replace}) {
 		    push @newhtml, $hp->execute($tok);
 		}
 		# put the ToC in
@@ -1555,7 +1760,8 @@ sub put_toc_inline ($) {
 =head2 ToC Map File
 
 For backwards compatibility with htmltoc, this method of specifying
-significant elements for the ToC is retained.
+significant elements for the ToC is retained.  It is, however,
+deprecated and will be removed in a future version.
 
 The ToC map file allows you to specify what significant elements to
 include in the ToC, what level they should appear in the ToC, and any
@@ -1642,7 +1848,7 @@ The following map file makes use of the before/after text fields:
     # A ToC map file that adds some formatting
     H1:1::<STRONG>,</STRONG>      # Make level 1 ToC entries <STRONG>
     H2:2::<EM>,</EM>              # Make level 2 entries <EM>
-    H2:3                          # Make level 3 entries as is
+    H3:3                          # Make level 3 entries as is
 
 B<EXAMPLE 3>
 
@@ -1651,80 +1857,80 @@ The following map file tries to index definition terms:
     # A ToC map file that can work for Glossary type documents
     H1:1
     H2:2
-    DT:3:DD:<EM>,<EM>    # Assumes document has a DD for each DT, otherwise ToC
+    DT:3:DD:<EM>,</EM>    # Assumes document has a DD for each DT, otherwise ToC
                        # will get entries with alot of text.
 
 =head1 DETAILS
 
 =head2 Formatting the ToC
 
-The ToC Map File gives you control on how the ToC entries may look,
-but there are other options to affect the final appearance of the
-ToC file created.
+The B<toc_entry> and other related options give you control on how the
+ToC entries may look, but there are other options to affect the final
+appearance of the ToC file created.
 
-With the -header option, the contents of the given file will be prepended
-before the generated ToC. This allows you to have introductory text,
-or any other text, before the ToC.
+With the B<header> option, the contents of the given file will be
+prepended before the generated ToC. This allows you to have introductory
+text, or any other text, before the ToC.
 
 =over 4
 
 =item Note:
 
-If you use the -header option, make sure the file specified
+If you use the B<header> option, make sure the file specified
 contains the opening HTML tag, the HEAD element (containing the
 TITLE element), and the opening BODY tag. However, these
-tags/elements should not be in the header file if the -inline
-options is used. See L<Inlining the ToC> for information on what
+tags/elements should not be in the header file if the B<inline>
+option is used. See L</Inlining the ToC> for information on what
 the header file should contain for inlining the ToC.
 
 =back 4
 
-With the --toclabel option, the contents of the given string will be
+With the B<toclabel> option, the contents of the given string will be
 prepended before the generated ToC (but after any text taken from a
---header file).
+B<header> file).
 
-With the -footer option, the contents of the file will be appended
+With the B<footer> option, the contents of the file will be appended
 after the generated ToC.
 
 =over 4
 
 =item Note:
 
-If you use the -footer, make sure it includes the closing BODY
-and HTML tags (unless, of course, you are using the --inline option).
+If you use the B<footer>, make sure it includes the closing BODY
+and HTML tags (unless, of course, you are using the B<inline> option).
 
 =back 4
 
-If the -header option is not specified, the appropriate starting
-HTML markup will be added, unless the --toc_only option is specified.
-If the -footer option is not specified, the appropriate closing
-HTML markup will be added, unless the --toc_only option is specified.
+If the B<header> option is not specified, the appropriate starting
+HTML markup will be added, unless the B<toc_only> option is specified.
+If the B<footer> option is not specified, the appropriate closing
+HTML markup will be added, unless the B<toc_only> option is specified.
 
 If you do not want/need to deal with header, and footer, files, then
-you are alloed to specify the title, -title option, of the ToC file;
+you are allowed to specify the title, B<title> option, of the ToC file;
 and it allows you to specify a heading, or label, to put before ToC
-entries' list, the -toclabel option. Both options have default values.
+entries' list, the B<toclabel> option. Both options have default values.
 
 If you do not want HTML page tags to be supplied, and just want
-the ToC itself, then specify the --toc_only option.
-If there are no --header or --footer files, then this will simply
-output the contents of --toclabel and the ToC itself.
+the ToC itself, then specify the B<toc_only> option.
+If there are no B<header> or B<footer> files, then this will simply
+output the contents of B<toclabel> and the ToC itself.
 
 =head2 Inlining the ToC
 
 The ability to incorporate the ToC directly into an HTML document
-is supported via the -inline option.
+is supported via the B<inline> option.
 
 Inlining will be done on the first file in the list of files processed,
 and will only be done if that file contains an opening tag matching the
---toc_tag value.
+B<toc_tag> value.
 
-If --overwrite is true, then the first file in the list will be
+If B<overwrite> is true, then the first file in the list will be
 overwritten, with the generated ToC inserted at the appropriate spot.
 Otherwise a modified version of the first file is output to either STDOUT
-or to the output file defined by the --toc_file option.
+or to the output file defined by the B<toc_file> option.
 
-The options --toc_tag and --toc_tag_replace are used to determine where
+The options B<toc_tag> and B<toc_tag_replace> are used to determine where
 and how the ToC is inserted into the output.
 
 B<Example 1>
@@ -1734,10 +1940,10 @@ B<Example 1>
 	toc_tag_replace => 0);
 
 This will put the generated ToC after the BODY tag of the first file.
-If the --header option is specified, then the contents of the specified
-file are inserted after the BODY tag.  If the --toclabel option is not
-empty, then the text specified by the --toclabel option is inserted.
-Then the ToC is inserted, and finally, if the --footer option is
+If the B<header> option is specified, then the contents of the specified
+file are inserted after the BODY tag.  If the B<toclabel> option is not
+empty, then the text specified by the B<toclabel> option is inserted.
+Then the ToC is inserted, and finally, if the B<footer> option is
 specified, it inserts the footer.  Then the rest of the input file
 follows as it was before.
 
@@ -1749,10 +1955,10 @@ B<Example 2>
 This will put the generated ToC after the first comment of the form
 <!--toc-->, and that comment will be replaced by the ToC
 (in the order
---header
---toclabel
-ToC
---footer)
+    B<header>
+    B<toclabel>
+    ToC
+    B<footer>)
 followed by the rest of the input file.
 
 =over 4
@@ -1765,27 +1971,9 @@ already contain these tags/elements.
 
 =back 4
 
-=head1 EXAMPLE
-
-A simple script to process HTML documents.
-
-    #! /usr/bin/perl -w
-    require 5.005_03;
-    use HTML::GenToc;
-
-    my $toc = HTML::GenToc->new(\@ARGS);
-    $toc->generate_anchors();
-    $toc->generate_toc();
-
 =head1 NOTES
 
 =over 4
-
-=item *
-
-One cannot use "CLEAR" as a value for the cumulative arguments
-if one is using the array-reference form of passing the arguments
-into the methods.
 
 =item *
 
@@ -1795,16 +1983,42 @@ the value. Else, it adds its own NAME attribute to the anchor.
 
 =item *
 
-The TITLE element is treated specially if specified in the ToC map
-file. It is illegal to insert anchors (A) into TITLE elements.
+The TITLE element is treated specially if specified in the B<toc_entry>
+option. It is illegal to insert anchors (A) into TITLE elements.
 Therefore, HTML::GenToc will actually link to the filename itself
 instead of the TITLE element of the document.
 
 =item *
 
-HTML::GenToc will ignore significant elements if it does not contain
+HTML::GenToc will ignore a significant element if it does not contain
 any non-whitespace characters. A warning message is generated if
 such a condition exists.
+
+=item *
+
+If you have a sequence of significant elements that change in a slightly
+disordered fashion, such as H1 -> H3 -> H2 or even H2 -> H1, though
+HTML::GenToc deals with this to create a list which is still good HTML, if
+you are using an ordered list to that depth, then you will get strange
+numbering, as an extra list element will have been inserted to nest the
+elements at the correct level.
+
+For example (H2 -> H1 with ol_num_levels=1):
+
+    1. 
+	* My H2 Header
+    2. My H1 Header
+
+For example (H1 -> H3 -> H2 with ol_num_levels=0 and H3 also being
+significant):
+
+    1. My H1 Header
+	1. 
+	    1. My H3 Header
+	2. My H2 Header
+    2. My Second H1 Header
+
+In cases such as this it may be better not to use the B<ol> option.
 
 =back 4
 
@@ -1826,7 +2040,7 @@ contained inside of an anchor. For example:
 
 will be converted to (if H1 is a significant element),
 
-    <A NAME="foo"><H1><A NAME="xtocidX">The</A> FOO command</H1></A>
+    <A NAME="foo"><H1><A NAME="The">The</A> FOO command</H1></A>
 
 which is illegal since anchors cannot be nested.
 
@@ -1849,10 +2063,8 @@ Tell me about them.
 
 =head1 PREREQUSITES
 
-HTML::GenToc requires Perl 5.005_03 or later.
-
-It also requires HTML::SimpleParse,
-Data::Dumper (only for debugging purposes)
+    HTML::SimpleParse
+    Data::Dumper (only for debugging purposes)
 
 =head1 EXPORT
 
@@ -1862,8 +2074,7 @@ None by default.
 
 perl(1)
 htmltoc(1)
-Data::Dumper
-HTML::SimpleParse
+hypertoc(1)
 
 =head1 AUTHOR
 
@@ -1874,7 +2085,7 @@ Earl Hood       ehood AT medusa.acs.uci.edu
 =head1 COPYRIGHT
 
 Copyright (C) 1994-1997  Earl Hood, ehood AT medusa.acs.uci.edu
-Copyright (C) 2002 Kathryn Andersen
+Copyright (C) 2002-2004 Kathryn Andersen
 
 This program is free software; you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by

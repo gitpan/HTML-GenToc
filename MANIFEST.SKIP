@@ -2,6 +2,10 @@
 \bRCS\b
 \bCVS\b
 ,v$
+^_darcs/
+^\.binaries$
+^\.boring$
+^\.darcs-temp-log.text
 # archives
 .*\.tar\.gz$
 # the TODO file

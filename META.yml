@@ -1,0 +1,19 @@
+--- #YAML:1.0
+name: HTML-GenToc
+version: 2.22
+author: Kathryn Andersen
+abstract: generate a table of contents for HTML documents
+license: gpl
+requires:
+  Data::Dumper: 0
+  Getopt::ArgvFile: 0
+  Getopt::Long: 0
+  HTML::SimpleParse: 0.1
+  Pod::Usage: 0
+build_requires:
+  Test::More: 0
+provides:
+  HTML::GenToc:
+    file: lib/HTML/GenToc.pm
+    version: 2.22
+generated_by: Module::Build version 0.25

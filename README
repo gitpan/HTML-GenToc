@@ -1,4 +1,4 @@
-HTML/GenToc version 2.10
+HTML/GenToc version 2.22
 ========================
 
 HTML::GenToc generates anchors and a table of contents for
@@ -19,35 +19,39 @@ INSTALLATION
 
 To install this module type the following:
 
-   perl Makefile.PL
-   make
-   make test
-   make install
+   perl Build.PL
+   ./Build
+   ./Build test
+   ./Build install
 
 This will install both the module HTML::GenToc and the script
 hypertoc which uses the module.
 
 DEPENDENCIES
 
-This module requires these other modules and libraries:
+The installation depends on:
+
+  Module::Build
+
+This module depends on:
 
   HTML::SimpleParse
 
 The script depends on the following modules:
 
-  ExtUtils::configPL
   Pod::Usage
   Getopt::Long
+  Getopt::ArgvFile
 
 Testing of this distribution depends on the following modules:
 
-  Test::Simple
+  Test::More
   Data::Dumper (for debugging only)
 
 COPYRIGHT AND LICENCE
 
 Copyright (C) 1994-1997  Earl Hood, ehood AT medusa.acs.uci.edu
-Copyright (C) 2002 Kathryn Andersen
+Copyright (C) 2002-2004 Kathryn Andersen
 
 This program is free software; you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
