@@ -1,6 +1,20 @@
 Revision history for Perl module HTML::GenToc.
 ==============================================
 
+1.3  Sun 17th November 2002
+	- fixed minor bug where the filename was always included in
+the table of contents even when it was an inline TOC and the filename
+in question was the containing file. (Only a minor bug because the link
+still worked, but it messed up things when the file in question was
+a .shtml file which had query arguments to it; presumably would mess up
+things like .php files as well.)
+
+1.2  Sat 26th October 2002
+	- fixed bug which would produce rubbish in the TOC if
+there happened to be an element which had an *attribute* which
+had content which matched a TOC entry; this would make it start
+collecting content for that, and never find an end-tag for it.
+
 1.1  Wed 28th August 2002
 	- fixed bug with requirements which prevented working with perl 5.5
 

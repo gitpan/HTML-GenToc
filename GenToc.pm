@@ -900,7 +900,7 @@ BEGIN {
 
 @EXPORT_OK = qw();
 
-$VERSION = '1.1';
+$VERSION = '1.3';
 
 #################################################################
 use constant GEN_TOC => "GEN_TOC";
@@ -1702,14 +1702,22 @@ sub make_toc ($$) {
 	$tok = shift @tree;
 	$level = 0;
 	$is_title = 0;
+	$tag = '';
 	if ($tok->{type} eq 'starttag')
 	{
 	    # check if tag included in TOC
 	    foreach my $key (keys %{$self->toc_entry()}) {
-		if ($tok->{content} =~ /$key/i
+		if ($tok->{content} =~ /^$key/i
 		    && (!$notoc
 			|| $tok->{content} !~ /$notoc/)) {
 		    $tag = $key;
+		    if ($self->debug()) {
+			print STDERR "============\n";
+			print STDERR "key = $key ";
+			print STDERR "tok->content = '", $tok->{content}, "' ";
+			print STDERR "tag = $tag";
+			print STDERR "\n============\n";
+		    }
 		    # level of significant element
 		    $level = abs($self->toc_entry()->{$key});
 		    # no <li> used in ToC listing
@@ -1732,6 +1740,9 @@ sub make_toc ($$) {
 	}
 	if (!$level) {
 	    next;
+	}
+	if ($self->debug()) {
+	    print STDERR "Chosen tag:$tag\n";
 	}
 
 	# get A element from document
@@ -1777,9 +1788,12 @@ sub make_toc ($$) {
 		last if $tok->{content} =~ m#$endtag#i;
 		$content .= $hp->execute($tok)
 		    unless $self->textonly()
-			|| $tok->{content} =~ m%/?(hr|p|a|img)%i;
+			|| $tok->{content} =~ m#/?(hr|p|a|img)#i;
 	    }
 
+	}
+	if ($self->debug()) {
+	    print STDERR "Chosen content:'$content'\n";
 	}
 
 	if ($content =~ /^\s*$/) {	# Check for empty content
@@ -1830,11 +1844,21 @@ sub make_toc ($$) {
 	$tmp  = '';
 	$tmp .= $self->entrysep()  if $noli && !$levelopen;
 	$tmp .= "\n<li>"  unless $noli && !$levelopen;
-	$tmp .= join('',
-		     qq|<a href="|,
-		     qq|$self->{__file}|,
-		     !$is_title ? qq|#$name| : '',
-		     qq|">$content</a>|);
+	if ($self->inline() and $self->infile()->[0] eq $self->{__file})
+	{
+	    $tmp .= join('',
+			 qq|<a href="|,
+			 !$is_title ? qq|#$name| : '',
+			 qq|">$content</a>|);
+	}
+	else
+	{
+	    $tmp .= join('',
+			 qq|<a href="|,
+			 qq|$self->{__file}|,
+			 !$is_title ? qq|#$name| : '',
+			 qq|">$content</a>|);
+	}
 	$tmp .= "</li>\n"  unless $noli && !$levelopen;
 	$toc_str .= $tmp;
 
