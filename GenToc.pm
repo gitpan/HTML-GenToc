@@ -900,7 +900,7 @@ BEGIN {
 
 @EXPORT_OK = qw();
 
-$VERSION = '1.3';
+$VERSION = '1.4';
 
 #################################################################
 use constant GEN_TOC => "GEN_TOC";

@@ -1,6 +1,13 @@
 Revision history for Perl module HTML::GenToc.
 ==============================================
 
+1.4  Wed 20th November 2002
+	- CPAN testers complained about a lack of explicitly stating
+all the dependencies of AppConfig, which either means that AppConfig
+has changed desperately, or their testing methods have changed, since
+I didn't think it was possible to get the AppConfig module without getting
+all its dependent modules, but, oh well.
+
 1.3  Sun 17th November 2002
 	- fixed minor bug where the filename was always included in
 the table of contents even when it was an inline TOC and the filename
