@@ -1,5 +1,5 @@
-HTML/GenToc version 1.4
-=======================
+HTML/GenToc version 2.01
+========================
 
 HTML::GenToc generates anchors and a table of contents for
 HTML documents.  Depending on the arguments, it will insert
@@ -11,6 +11,9 @@ HTML code is complete, pure HTML, one can input pseudo-html
 or page-fragments, which makes it suitable for using on templates
 and HTML meta-languages such as WML.
 
+Also included is hypertoc, a script which uses the module so that
+one can process files on the command-line in a user-friendly manner.
+
 INSTALLATION
 
 To install this module type the following:
@@ -20,13 +23,24 @@ To install this module type the following:
    make test
    make install
 
+This will install both the module HTML::GenToc and the script
+hypertoc which uses the module.
+
 DEPENDENCIES
 
 This module requires these other modules and libraries:
 
-  Pod::Usage
-  AppConfig and Getopt::Long
   HTML::SimpleParse
+
+The script depends on the following modules:
+
+  ExtUtils::configPL
+  Pod::Usage
+  Getopt::Long
+
+Testing of this distribution depends on the following modules:
+
+  Test::Simple
   Data::Dumper (for debugging only)
 
 COPYRIGHT AND LICENCE

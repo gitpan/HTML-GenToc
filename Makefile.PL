@@ -4,16 +4,16 @@ use ExtUtils::MakeMaker;
 WriteMakefile(
     'NAME'		=> 'HTML::GenToc',
     'VERSION_FROM'	=> 'GenToc.pm', # finds $VERSION
-    'PREREQ_PM'		=> {'HTML::SimpleParse' => 0.10,
-		'AppConfig' => 1.52,
-		'AppConfig::Args' => 0,
-		'AppConfig::File' => 0,
-		'AppConfig::State' => 0,
-		'AppConfig::Sys' => 0,
+    'PREREQ_PM'		=> {
+		'ExtUtils::configPL' => 0,
+    		'HTML::SimpleParse' => 0.10,
+		'Getopt::Long' => 0,
 		'Pod::Usage' => 0,
 		'Data::Dumper' => 0,
 		'Test::Simple' => 0,
-	}, # e.g., Module::Name => 1.1
+	}, 
+    'PL_FILES' => { 'hypertoc.PL' => 'hypertoc'},
+    'EXE_FILES' => ['hypertoc'],
     ($] >= 5.005 ?    ## Add these new keywords supported since 5.005
       (ABSTRACT_FROM => 'GenToc.pm', # retrieve abstract from module
        AUTHOR     => 'Kathryn Andersen <rubykat@katspace.com>') : ()),

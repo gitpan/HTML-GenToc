@@ -1,6 +1,19 @@
 Revision history for Perl module HTML::GenToc.
 ==============================================
 
+2.01 Sun 8th December 2002
+	- Bug fix in hypertoc, to fix the way Getopt::ArgvFile is called.
+
+2.00 Sun 8th December 2002
+	- no longer using the AppConfig module, but the old style of
+calling the methods should still work.  Some of the options which were
+synonyms have been removed.
+	- the hypertoc script is now part of this distribution. It now
+uses Getopt::Long and Getopt::ArgvFile instead of AppConfig.  This
+gives it the full power of Getopt::Long, while config files are taken
+care of by Getopt::ArgvFile.  This means a slightly different format
+for config files.
+
 1.4  Wed 20th November 2002
 	- CPAN testers complained about a lack of explicitly stating
 all the dependencies of AppConfig, which either means that AppConfig

@@ -3,6 +3,7 @@ MANIFEST
 Makefile.PL
 README
 GenToc.pm
+hypertoc.PL
 test.pl
 test1.wml
 good_test1_anch.wml

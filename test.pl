@@ -68,7 +68,7 @@ sub compare {
 # Insert your test code below, the Test module is use()ed here so read
 # its man page ( perldoc Test ) for help writing this test script.
 
-$toc = new HTML::GenToc();
+$toc = new HTML::GenToc(debug=>0);
 ok( defined $toc, 'new() returned something' );
 ok( $toc->isa('HTML::GenToc'), "  and it's the right class" );
 
@@ -92,8 +92,10 @@ $result = compare('test1_toc.html', 'good_test1_toc.html');
 ok($result, 'test1_toc.html matches good output exactly');
 
 # clean up test1
-unlink('test1_anch.wml');
-unlink('test1_toc.html');
+if ($result) {
+    unlink('test1_anch.wml');
+    unlink('test1_toc.html');
+}
 
 @args = ();
 push @args, '--file', 'CLEAR', '--toc_file', '',
@@ -116,8 +118,10 @@ $result = compare('test2_anch.html', 'good_test2_toc.html');
 ok($result, 'test2_anch.html matches good output exactly');
 
 # clean up
-unlink('test2_anch.html');
-unlink('test2_anch.html.org');
+if ($result) {
+    unlink('test2_anch.html');
+    unlink('test2_anch.html.org');
+}
 
 @args = ();
 push @args, '--file', 'CLEAR', '--bak', '', '--noinline', '--nooverwrite',
@@ -142,10 +146,7 @@ $result = compare('test3_toc.html', 'good_test3_toc.html');
 ok($result, 'test3_toc.html matches good output exactly');
 
 # clean up
-unlink('test3_anch.wml');
-unlink('test3_toc.html');
-
-# misc stuff
-#@args = ();
-#push @args, '--unknown_option';
-#$result = $toc->args(\@args);
+if ($result) {
+    unlink('test3_anch.wml');
+    unlink('test3_toc.html');
+}
