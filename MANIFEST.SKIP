@@ -6,6 +6,10 @@
 ^\.binaries$
 ^\.boring$
 ^\.darcs-temp-log.text
+^darcs_prebuild.pl$
+^mod_devaid.conf$
+^old_version.txt$
+^version.txt$
 # archives
 .*\.tar\.gz$
 # the TODO file
@@ -18,6 +22,9 @@
 ^blib/
 ^MakeMaker-\d
 pm_to_blib
+# Module::Build files
+^Build$
+^_build/
 
 # temp, old, backup files
 ~$

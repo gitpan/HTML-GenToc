@@ -1,4 +1,4 @@
-use Test::More tests => 30;
+use Test::More tests => 34;
 use HTML::GenToc;
 require 't/compare.pl';
 
@@ -357,6 +357,51 @@ ok($result, 'test6a_toc.html matches good output exactly');
 # clean up
 if ($result) {
     unlink('test6a_toc.html');
+}
+
+#
+# RESET file test2a
+#
+undef $toc;
+$toc = new HTML::GenToc(debug=>0);
+
+if (-f 'test2a_anch.html')
+{
+    unlink('test2a_anch.html');
+}
+if (-f 'test2a_anch.html.org')
+{
+    unlink('test2a_anch.html.org');
+}
+$result = $toc->generate_anchors(
+	outfile=>'',
+	toc_file=>'',
+	quiet=>1,
+	use_id=>1,
+	infile=>['tfiles/test2.html'],
+	outfile=>'test2a_anch.html',
+);
+ok($result, 'generated anchors (ID) from test2.html');
+
+# compare the files
+$result = compare('test2a_anch.html', 'tfiles/good_test2a_anch.html');
+ok($result, 'test2a_anch.html matches good output exactly');
+
+$result = $toc->generate_toc(
+	infile=>['test2a_anch.html'],
+	inline=>1,
+	overwrite=>1,
+);
+ok($result, 'generated toc inline test2a_anch.html');
+
+# compare the files
+$result = compare('test2a_anch.html', 'tfiles/good_test2a_toc.html');
+ok($result, 'test2a_anch.html matches good output exactly');
+
+# clean up
+if ($result) {
+    unlink('test2a_anch.html');
+    unlink('test2a_anch.html.org');
 }
 
 # vim: ft=perl

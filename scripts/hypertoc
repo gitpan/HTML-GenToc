@@ -1,9 +1,19 @@
 #!/usr/bin/env perl
-##---------------------------------------------------------------------------##
+require 5.005_03;
+use strict;
 
 =head1 NAME
 
 hypertoc - generate a table of contents for HTML documents
+
+=head1 VERSION
+
+This describes version B<2.30> of hypertoc.
+
+=cut
+
+use vars qw($VERSION);
+$VERSION = '2.30';
 
 =head1 SYNOPSIS
 
@@ -22,7 +32,7 @@ where I<common options> are:
 
 and I<gen_anchors options> are:
 
-[ --outfile I<file> ] [ --useorg ]
+[ --outfile I<file> ] [ --use_id ] [ --useorg ]
 
 and I<gen_toc options> are:
 
@@ -197,7 +207,7 @@ one would override the other.
 
 See L</HTML::GenToc/ToC Map File> for further information.
 
-=back 4
+=back
 
 =head2 Generate Anchors Options
 
@@ -216,12 +226,18 @@ are processing more than one file.  If you give '-' as the filename, then
 output will go to STDOUT.
 (default: STDOUT)
 
+=item --use_id
+
+Use ID="I<name>" for anchors rather than <A NAME="I<name>"> anchors.
+However if an anchor already exists for a Significant Element, this
+won't make an ID for that particular element.
+
 =item --useorg
 
 Use pre-existing backup files as the input source; that is, files of the
 form I<infile>.I<bak>  (see --infile and --bak).
 
-=back 4
+=back
 
 =head2 Generate TOC Options
 
@@ -355,7 +371,7 @@ then a HTML page footer will be output.
 
 (same as --toc_label)
 
-=back 4
+=back
 
 =head1 FILE FORMATS
 
@@ -465,7 +481,7 @@ tags/elements should not be in the header file if the --inline
 options is used. See L</Inlining the ToC> for information on what
 the header file should contain for inlining the ToC.
 
-=back 4
+=back
 
 With the --toc_label option, the contents of the given string will be
 prepended before the generated ToC (but after any text taken from a
@@ -481,7 +497,7 @@ after the generated ToC.
 If you use the -footer, make sure it includes the closing BODY
 and HTML tags (unless, of course, you are using the --inline option).
 
-=back 4
+=back
 
 If the --header option is not specified, the appropriate starting
 HTML markup will be added, unless the --toc_only option is specified.
@@ -550,7 +566,7 @@ The header file should not contain the beginning HTML tag
 and HEAD element since the HTML file being processed should
 already contain these tags/elements.
 
-=back 4
+=back
 
 =head1 EXAMPLES
 
@@ -707,7 +723,7 @@ If using hypertoc as part of a pipe, remember that both the
 so if you try to do them both in the same pass, you need to explicitly
 disable one of them by setting --outfile or --toc_file to ''.
 
-=back 4
+=back
 
 =head1 CAVEATS
 
@@ -758,13 +774,13 @@ hypertoc will detect the "foo" NAME and use it.
 
 NAME attributes without quotes are not recognized.
 
-=back 4
+=back
 
 =head1 BUGS
 
 Tell me about them.
 
-=head1 PREREQUISITES
+=head1 REQUIRES
 
     Getopt::Long
     Getopt::ArgvFile
@@ -783,7 +799,7 @@ Web
 
 hypertoc looks in the HOME directory for config files.
 
-=back 4
+=back
 
 =head1 FILES
 
@@ -798,7 +814,7 @@ User configuration file.
 Configuration file in the current working directory; overrides
 options in C<~/.hypertocrc> and is overridden by command-line options.
 
-=back 4
+=back
 
 =head1 SEE ALSO
 
@@ -836,14 +852,7 @@ Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 =cut
 
 #################################################################
-# Globals
-#
-use vars qw($VERSION);
-$VERSION = '2.22';
-
-#################################################################
 # Includes
-require 5.005_03;
 use Getopt::Long;
 use Pod::Usage;
 use HTML::GenToc;
@@ -909,6 +918,7 @@ sub process_args ($) {
 	'toc_end=s%',
 	'toc_before=s%',
 	'toc_after=s%',
+	'use_id!',
 	'useorg!',
 	'gen_toc|generate_toc',
 	'gen_anchors|generate_anchors',

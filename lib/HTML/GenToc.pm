@@ -1,8 +1,19 @@
-#! /usr/bin/perl
+package HTML::GenToc;
+require 5.005_03;
+use strict;
 
 =head1 NAME
 
-HTML::GenToc - Generate/insert anchors and a Table of Contents (ToC) for HTML documents.
+HTML::GenToc - Generate a Table of Contents for HTML documents.
+
+=head1 VERSION
+
+This describes version B<2.30> of HTML::GenToc.
+
+=cut
+
+use vars qw($VERSION);
+$VERSION = '2.30';
 
 =head1 SYNOPSIS
 
@@ -42,15 +53,27 @@ HTML::GenToc - Generate/insert anchors and a Table of Contents (ToC) for HTML do
 
 =head1 DESCRIPTION
 
-HTML::GenToc allows you to specify "significant elements" that will be
-hyperlinked to in a "Table of Contents" (ToC) for a given set of HTML
-documents.  Also, it does not require said documents to be strict HTML;
-this makes it suitable for using with templates and meta-languages such
-as WML.
+HTML::GenToc generates anchors and a table of contents for
+HTML documents.  Depending on the arguments, it will insert
+the information it generates, or output to a string, a separate file
+or STDOUT.
 
-Basically, the ToC generated is a multi-level level list containing
-links to the significant elements. HTML::GenToc inserts the links into the
-ToC to significant elements at a level specified by the user.
+While it defaults to taking H1 and H2 elements as the significant
+elements to put into the table of contents, any tag can be defined
+as a significant element.  Also, it doesn't matter if the input
+HTML code is complete, pure HTML, one can input pseudo-html
+or page-fragments, which makes it suitable for using on templates
+and HTML meta-languages such as WML.
+
+Also included in the distrubution is hypertoc, a script which uses the
+module so that one can process files on the command-line in a
+user-friendly manner.
+
+=head1 DETAILS
+
+The ToC generated is a multi-level level list containing links to the
+significant elements. HTML::GenToc inserts the links into the ToC to
+significant elements at a level specified by the user.
 
 B<Example:>
 
@@ -112,18 +135,8 @@ complicated and ambiguous and prone to error)
 
 =cut
 
-package HTML::GenToc;
-
-require 5.005_03;
-use strict;
-
-use vars qw($VERSION);
-BEGIN {
-    use Data::Dumper;
-    use HTML::SimpleParse;
-}
-
-$VERSION = '2.22';
+use Data::Dumper;
+use HTML::SimpleParse;
 
 #################################################################
 
@@ -347,7 +360,7 @@ other methods of output, except in the case where the user hasn't
 specified any other method of output; then the default method (STDOUT)
 is overridden to just output to the string.
 
-=back 4
+=back
 
 =cut
 sub args {
@@ -554,6 +567,14 @@ generate_toc.
 
 (this option is not supported in the old array format)
 
+=item use_id
+
+use_id => 1
+
+Use ID="I<name>" for anchors rather than <A NAME="I<name>"> anchors.
+However if an anchor already exists for a Significant Element, this
+won't make an ID for that particular element.
+
 =item useorg
 
 useorg => 1
@@ -561,7 +582,7 @@ useorg => 1
 Use pre-existing backup files as the input source; that is, files of the
 form I<infile>.I<bak>  (see B<infile> and B<bak>).
 
-=back 4
+=back
 
 =cut
 sub generate_anchors ($;%) {
@@ -818,7 +839,7 @@ be output.
 
 (default:false)
 
-=back 4
+=back
 
 =cut
 sub generate_toc ($;$) {
@@ -977,12 +998,19 @@ sub generate_toc ($;$) {
     return 1;
 } # generate_toc
 
-#---------------------------------------------------------------#
+=head1 INTERNAL METHODS
 
-#--------------------------------#
-# Name: init_our_data
-# Args:
-#   $self
+These methods are documented for developer purposes and aren't intended
+to be used externally.
+
+=head2 init_our_data
+
+    init_our_data($self);
+
+Initializes the data for the object.
+
+=cut
+
 sub init_our_data ($) {
     my $self = shift;
 
@@ -1041,12 +1069,14 @@ sub init_our_data ($) {
 
 } # init_our_data
 
-#--------------------------------#
-# Name: read_tocmap
-# Reads the ToC mapfile.
-# Args:
-#   $self
-#   $tocmap
+=head2 read_tocmap
+
+    $toc->read_tocmap($tocmap);
+
+Reads the ToC mapfile.
+
+=cut
+
 sub read_tocmap ($$) {
     my $self = shift;
     my $tocmap = shift;
@@ -1087,25 +1117,14 @@ sub read_tocmap ($$) {
     close(TOCMAP);
 }
 
-#---------------------------------------------------------------#
-# common subroutines
+=head2 set_file_content
 
-#--------------------------------#
-# Name: cp
-# copies file $src to $dst
-# Args:
-#   $src
-#   $dst
-sub cp ($$) {
-    my($src, $dst) = @_;
-    open (SRC, $src) ||
-	die "Error: unable to open ", $src, ": $!\n";
-    open (DST, "> $dst") ||
-	die "Error: unable to open ", $dst, ": $!\n";
-    print DST <SRC>;
-    close(SRC);
-    close(DST);
-}
+    $toc->set_file_content();
+
+Sets the file-content array, either reading in the given files,
+or using the already-set file_strings array.
+
+=cut
 
 sub set_file_content {
     my $self = shift;
@@ -1154,15 +1173,16 @@ sub set_file_content {
     return @file_content;
 } # set_file_content
 
-#---------------------------------------------------------------#
-# generate_anchors related subroutines
+=head2 make_anchor_name
 
-#--------------------------------#
-# Name: make_anchor_name
-# Makes the anchor-name for one anchor
-# Args:
-#   $self
-#   $file
+    $toc->make_anchor_name($content);
+
+Makes the anchor-name for one anchor.
+Tries to make the smallest unique name derived from
+the given content.
+
+=cut
+
 sub make_anchor_name ($$) {
     my $self = shift;
     my $content = shift;
@@ -1202,10 +1222,15 @@ sub make_anchor_name ($$) {
     return $name;
 } # make_anchor_name
 
-#--------------------------------#
-# Name: make_anchors
-# Makes the anchors for one file
-# returns a string
+=head2 make_anchors
+
+    my $new_html = $toc->make_anchors(input=>$html, filename=>$filename);
+
+Makes the anchors for one file.
+Returns a string.
+
+=cut
+
 sub make_anchors ($%) {
     my $self = shift;
     my %args = (
@@ -1229,7 +1254,6 @@ sub make_anchors ($%) {
     my $endtag;
     my $level = 0;
     my $tmp;
-    my $content;
     my $adone = 0;
     my $name = '';
     my $is_title;
@@ -1247,9 +1271,11 @@ sub make_anchors ($%) {
 	    push @newhtml, $hp->execute($tok);
 	    next;
 	}
+	# assert: we have a start tag
 	$level = 0;
 	$is_title = 0;
-	# check if tag included in TOC
+	
+	# check if tag included in TOC (significant element)
 	foreach my $key (keys %{$self->{options}->{toc_entry}}) {
 	    if ($tok->{content} =~ /$key/i
 		&& (!$notoc
@@ -1262,34 +1288,103 @@ sub make_anchors ($%) {
 		last;
 	    }
 	}
+	# if $level is not set, we didn't find a Significant tag
 	if (!$level) {
 	    push @newhtml, $hp->execute($tok);
 	    next;
 	}
+	# assert: current tag is a Significant tag
 
 	#
-	# Add A element to document
+	# Add A element or ID to document
 	#
-	$content = '';
 	$adone = 0;
 	$name = '';
+	my $sig_tok = $tok;
 	if ($tag =~ /title/i) {		# TITLE tag is a special case
 	    $is_title = 1;  $adone = 1;
 	}
-	push @newhtml, $hp->execute($tok);
+	if ($self->{options}->{use_id})
+	{
+	    # is there an existing ID?
+	    if ($sig_tok->{content} =~ /ID\s*=\s*(['"])/i) {
+		my $q = $1;
+		($name) = $sig_tok->{content} =~ m/ID\s*=\s*$q([^$q]*)$q/i;
+		if ($name)
+		{
+		    $self->{__anchors}->{$name} = 1;
+		    push @newhtml, $hp->execute($sig_tok);
+		    $adone = 1;
+		}
+		else # if the ID has no name, remove it!
+		{
+		    $sig_tok->{content} =~ s/ID\s*=\s*$q$q//i;
+		}
+	    }
+	}
+	else # not adding ID, move right along
+	{
+	    push @newhtml, $hp->execute($tok);
+	}
+	# Find the "name" of the significant element
+	# Don't consume the tree, because ID behaves differently from A
+	my $i = 0;
+	my $name_in_anchor = 0;
+	while (!$name && $i < @tree)
+	{
+	    $tok = $tree[$i];
+	    $next_tok = $tree[$i + 1];
+	    if ($tok->{type} eq 'text') {
+		$name = $self->make_anchor_name($tok->{content});
+	    # Anchor
+	    } elsif (!$adone && $tok->{type} eq 'starttag'
+		&& $tok->{content} =~ /^A/i)
+	    {
+		if ($tok->{content} =~ /NAME\s*=\s*(['"])/i) {
+		    my $q = $1;
+		    ($name) = $tok->{content} =~ m/NAME\s*=\s*$q([^$q]*)$q/i;
+		    $name_in_anchor = 1;
+		} elsif ($next_tok->{type} eq 'text') {
+		    $name = $self->make_anchor_name($next_tok->{content});
+		}
+	    } elsif ($tok->{type} eq 'starttag'
+		    || $tok->{type} eq 'endtag')
+	    {	# Tag
+		last if $tok->{content} =~ m|$endtag|i;
+	    }
+	    $i++;
+	}
+	# assert: there is a name, or there is no name to be found
+	if (!$name)
+	{
+	    # make up a name
+	    $name = $self->make_anchor_name("TOC");
+	}
+	if ($self->{options}->{use_id})
+	{
+	    if (!$name_in_anchor)
+	    {
+		$self->{__anchors}->{$name} = 1;
+		# add the ID
+		$sig_tok->{content} .= " ID='$name'";
+		push @newhtml, $hp->execute($sig_tok);
+		$adone = 1;
+	    }
+	    else
+	    {
+		# we have an already-named anchor, so don't add an ID
+		push @newhtml, $hp->execute($sig_tok);
+	    }
+	}
+	
 	while (@tree) {
 	    $tok = shift @tree;
 	    $next_tok = $tree[0];
 	    # Text
 	    if ($tok->{type} eq 'text') {
-		$content .= $tok->{content};
-
-		if (!$name) {
-		    $name = $self->make_anchor_name($tok->{content});
-		}
-
 		if (!$adone && $tok->{content} !~ /^\s*$/) {
 		    $self->{__anchors}->{$name} = 1;
+		    # replace the text with an anchor containing the text
 		    push(@newhtml, qq|<a name="$name">$tok->{content}</a>|);
 		    $adone = 1;
 		} else {
@@ -1300,22 +1395,10 @@ sub make_anchors ($%) {
 		&& $tok->{content} =~ /^A/i)
 	    {
 		# is there an existing NAME anchor?
-		if ($tok->{content} =~ /NAME\s*=\s*(['"])/i) {
-		    my $q = $1;
-		    ($name) = $tok->{content} =~ m/NAME\s*=\s*$q([^$q]*)$q/i;
+		if ($name_in_anchor) {
 		    $self->{__anchors}->{$name} = 1;
 		    push @newhtml, $hp->execute($tok);
 		} else {
-		    if (!$name) { # if no anchor name yet, try to get it
-			if ($next_tok->{type} eq 'text') {
-			    $name = $self->make_anchor_name(
-				$next_tok->{content});
-			}
-			if (!$name) {
-			    # make a generic anchor name
-			    $name = $self->make_anchor_name("TOC");
-			}
-		    }
 		    # add the current name anchor
 		    $tmp = $hp->execute($tok);
 		    $tmp =~ s/^(<A)(.*)$/$1 name="$name" $2/i;
@@ -1328,14 +1411,10 @@ sub make_anchors ($%) {
 	    {	# Tag
 		push @newhtml, $hp->execute($tok);
 		last if $tok->{content} =~ m|$endtag|i;
-		$content .= $hp->execute($tok)
-		    unless $self->{options}->{textonly}
-			|| $tok->{content} =~ m%/?(hr|p|a|img)%i;
 	    }
 	    else {
 		push @newhtml, $hp->execute($tok);
 	    }
-
 	}
 	$self->{__prevlevel} = $level;
     }
@@ -1343,14 +1422,14 @@ sub make_anchors ($%) {
     return join('', @newhtml);
 } # make_anchors
 
-#---------------------------------------------------------------#
-# generate_toc related subroutines
+=head2 make_toc
 
-#--------------------------------#
-# Name: make_toc
-# Makes (a portion of) the ToC from one file
-# Returns:
-#   $toc_str
+    my $toc_str = $toc->make_toc(input=>$html, filename=>$filename);
+
+Makes (a portion of) the ToC from one file.
+
+=cut
+
 sub make_toc ($%) {
     my $self = shift;
     my %args = (
@@ -1435,8 +1514,9 @@ sub make_toc ($%) {
 	if ($self->{options}->{debug}) {
 	    print STDERR "Chosen tag:$tag\n";
 	}
+	# assert: we are at a Significant tag
 
-	# get A element from document
+	# get A element or ID from document
 	# This assumes that there is one there
 	$content = '';
 	$adone = 0;
@@ -1448,6 +1528,12 @@ sub make_toc ($%) {
 		$is_title = 1;  $adone = 1;
 		$found_title = 1;
 	    }
+	}
+	# check for an ID before we skip this tag
+	if ($tok->{content} =~ /ID\s*=\s*(['"])/i) {
+	    my $q = $1;
+	    ($name) = $tok->{content} =~ m/ID\s*=\s*$q([^$q]*)$q/i;
+	    $adone = 1;
 	}
 	while (@tree) {
 	    $tok = shift @tree;
@@ -1513,9 +1599,9 @@ sub make_toc ($%) {
 	    # open closed levels
 	    for ($i = ($self->{__prevlevel} + 1); $i <= $level; $i++) {
 		my $open_tag = @{$self->{__tags}}[$#{$self->{__tags}}];
-# if we've already just opened a ul/ol
-# then insert an "invisible" list item to correctly
-# nest the lists
+		# if we've already just opened a ul/ol
+		# then insert an "invisible" list item to correctly
+		# nest the lists
 		if ($i > 1
 		    && defined $open_tag
 		    && ($open_tag eq 'ul' || $open_tag eq 'ol')) {
@@ -1543,7 +1629,6 @@ sub make_toc ($%) {
 	# Set anchor string
 	$tmp  = '';
 	$tmp .= $self->{options}->{entrysep}  if $noli && !$levelopen;
-#	$tmp .= "\n<li>"  unless $noli && !$levelopen;
 	$tmp .= "\n" . $self->get_tag('li', level=>$level)  unless $noli && !$levelopen;
 	if ($self->{options}->{inline} and $self->{options}->{infile}->[0] eq $self->{__cur_file})
 	{
@@ -1560,7 +1645,6 @@ sub make_toc ($%) {
 			 !$is_title ? qq|#$name| : '',
 			 qq|">$content</a>|);
 	}
-#	$tmp .= "</li>\n"  unless $noli && !$levelopen;
 	$toc_str .= $tmp;
 
 	$name = 'NOTOC';
@@ -1571,18 +1655,23 @@ sub make_toc ($%) {
     return $toc_str;
 } # make_toc
 
-# Get the tags for the TOC (that is, li, ul, ol)
-#
-# output the tag wanted (add the <> and the / if necessary)
-# - output in lower or upper case
-# - do tag-related processing
-# options:
-#   tag_type=>'start' | tag_type=>'end' | tag_type=>'empty'
-#   (default start)
-#   inside_tag=>string (default empty)
-#   tag_level=>num (what level of the TOC list we're on)
-#
-# (code derived from txt2html)
+=head2 get_tag
+
+Get the tags for the TOC (that is, li, ul, ol)
+
+output the tag wanted (add the <> and the / if necessary)
+- output in lower or upper case
+- do tag-related processing
+options:
+  tag_type=>'start' | tag_type=>'end' | tag_type=>'empty'
+  (default start)
+  inside_tag=>string (default empty)
+  tag_level=>num (what level of the TOC list we're on)
+
+(code derived from txt2html)
+
+=cut
+
 sub get_tag ($$;%) {
     my $self	    = shift;
     my $in_tag	    = shift;
@@ -1644,9 +1733,16 @@ sub get_tag ($$;%) {
     return $out_tag;
 } # get_tag
 
-# close the open tag
-#
-# (code derived from txt2html)
+=head2 close_tag
+
+    my $out_tag = $toc->close_tag($tag);
+
+Close the open tag.
+
+(code derived from txt2html)
+
+=cut
+
 sub close_tag ($$) {
     my $self	    = shift;
     my $in_tag	    = shift;
@@ -1672,12 +1768,15 @@ sub close_tag ($$) {
     return $out_tag . "\n";
 }
 
-#--------------------------------#
-# Name: put_toc_inline
-# Puts the given toc_str into the given file
-# Args:
-#   $self
-#   $file
+=head2 put_toc_inline
+
+    my @newhtml = $toc->put_toc_inline(toc_str=>$toc_str,
+	filename=>$filename, in_string=>$in_string);
+
+Puts the given toc_str into the given file.
+
+=cut
+
 sub put_toc_inline ($) {
     my $self = shift;
     my %args = (
@@ -1749,8 +1848,26 @@ sub put_toc_inline ($) {
 	}
     }
 
-
     return @newhtml;
+}
+
+=head2 cp
+
+    cp($src, $dst);
+
+Copies file $src to $dst.
+
+=cut
+
+sub cp ($$) {
+    my($src, $dst) = @_;
+    open (SRC, $src) ||
+	die "Error: unable to open ", $src, ": $!\n";
+    open (DST, "> $dst") ||
+	die "Error: unable to open ", $dst, ": $!\n";
+    print DST <SRC>;
+    close(SRC);
+    close(DST);
 }
 
 1;
@@ -1824,7 +1941,7 @@ character (which implies a comma cannot be contained in the
 before/after text). See examples following for the use of this
 field.
 
-=back 4
+=back
 
 In the map file, the first two fields MUST be specified.
 
@@ -1883,7 +2000,7 @@ tags/elements should not be in the header file if the B<inline>
 option is used. See L</Inlining the ToC> for information on what
 the header file should contain for inlining the ToC.
 
-=back 4
+=back
 
 With the B<toclabel> option, the contents of the given string will be
 prepended before the generated ToC (but after any text taken from a
@@ -1899,7 +2016,7 @@ after the generated ToC.
 If you use the B<footer>, make sure it includes the closing BODY
 and HTML tags (unless, of course, you are using the B<inline> option).
 
-=back 4
+=back
 
 If the B<header> option is not specified, the appropriate starting
 HTML markup will be added, unless the B<toc_only> option is specified.
@@ -1969,7 +2086,7 @@ The header file should not contain the beginning HTML tag
 and HEAD element since the HTML file being processed should
 already contain these tags/elements.
 
-=back 4
+=back
 
 =head1 NOTES
 
@@ -2020,7 +2137,7 @@ significant):
 
 In cases such as this it may be better not to use the B<ol> option.
 
-=back 4
+=back
 
 =head1 LIMITATIONS
 
@@ -2055,20 +2172,58 @@ HTML::GenToc will detect the "foo" NAME and use it.
 
 NAME attributes without quotes are not recognized.
 
-=back 4
+=back
 
 =head1 BUGS
 
 Tell me about them.
 
-=head1 PREREQUSITES
+=head1 REQUIRES
 
-    HTML::SimpleParse
-    Data::Dumper (only for debugging purposes)
+The installation of this module requires C<Module::Build>.  The module
+depends on C<HTML::SimpleParse> and uses C<Data::Dumper> for debugging
+purposes.  The hypertoc script depends on C<Getopt::Long>,
+C<Getopt::ArgvFile> and C<Pod::Usage>.  Testing of this distribution
+depends on C<Test::More>.
 
-=head1 EXPORT
+=head1 INSTALLATION
 
-None by default.
+To install this module, run the following commands:
+
+    perl Build.PL
+    ./Build
+    ./Build test
+    ./Build install
+
+Or, if you're on a platform (like DOS or Windows) that doesn't like the
+"./" notation, you can do this:
+
+   perl Build.PL
+   perl Build
+   perl Build test
+   perl Build install
+
+In order to install somewhere other than the default, such as
+in a directory under your home directory, like "/home/fred/perl"
+go
+
+   perl Build.PL --install_base /home/fred/perl
+
+as the first step instead.
+
+This will install the files underneath /home/fred/perl.
+
+You will then need to make sure that you alter the PERL5LIB variable to
+find the modules, and the PATH variable to find the script.
+
+Therefore you will need to change:
+your path, to include /home/fred/perl/script (where the script will be)
+
+	PATH=/home/fred/perl/script:${PATH}
+
+the PERL5LIB variable to add /home/fred/perl/lib
+
+	PERL5LIB=/home/fred/perl/lib:${PERL5LIB}
 
 =head1 SEE ALSO
 
@@ -2078,9 +2233,9 @@ hypertoc(1)
 
 =head1 AUTHOR
 
-Kathryn Andersen      http://www.katspace.com
-based on htmltoc by
-Earl Hood       ehood AT medusa.acs.uci.edu
+Kathryn Andersen     (RUBYKAT)	http://www.katspace.com
+
+Based on htmltoc by Earl Hood       ehood AT medusa.acs.uci.edu
 
 =head1 COPYRIGHT
 

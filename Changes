@@ -1,5 +1,32 @@
-Revision history for Perl module HTML-GenToc
-============================================
+Revision history for HTML::GenToc
+=================================
+
+2.30 Fri 22 October 2004
+------------------------
+
+  * (22 Oct 2004) documentation and README
+  	Now auto-generate the README from the module PoD; which entailed
+  rewriting and improving it.
+
+  * (22 Oct 2004) updated TODO
+
+  * (22 Oct 2004) optional tests
+  	Added optional tests using Test::Distribution, Test::Pod and
+  Test::Pod::Coverage which only run if you have those modules installed.
+
+  * (22 Oct 2004) improving Pod
+  	Some things which additional optional tests complained about,
+  such as Pod about every function, and the usage of =back, fixed.
+  (Needed to commit this before adding the actual tests which tested
+  this, because otherwise the tests failed)
+
+  * (22 Oct 2004) use_id option
+  	Add option to use IDs instead of anchors in generate_anchors
+  and also recognise IDs in generate_toc.
+
+  * (10 Oct 2004) change auto-build stuff to Module::DevAid
+  	Now that I've written a proper module for it, use it.
+
 
 2.22 Wed 06 October 2004
 ------------------------
