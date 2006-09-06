@@ -1,4 +1,4 @@
-use Test::More tests => 6;
+use Test::More tests => 8;
 
 require 't/compare.pl';
 
@@ -51,5 +51,21 @@ ok($result, 'hypertoc: test1a_toc.html matches good output exactly');
 # clean up test1
 if ($result) {
     unlink('test1a_toc.html');
+}
+
+#
+# test with option file
+#
+$command = "perl -I lib scripts/hypertoc --argfile tfiles/test1b.args";
+$result = system($command);
+ok($result == 0, 'hypertoc generated toc (argfile) from test1.wml');
+
+# compare the files
+$result = compare('test1b_toc.html', 'tfiles/good_test1a_toc.html');
+ok($result, 'hypertoc: test1b_toc.html matches good output exactly');
+
+# clean up test1
+if ($result) {
+    unlink('test1b_toc.html');
 }
 

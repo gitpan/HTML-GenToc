@@ -8,12 +8,12 @@ hypertoc - generate a table of contents for HTML documents
 
 =head1 VERSION
 
-This describes version B<2.30> of hypertoc.
+This describes version B<2.31> of hypertoc.
 
 =cut
 
 use vars qw($VERSION);
-$VERSION = '2.30';
+$VERSION = '2.31';
 
 =head1 SYNOPSIS
 
@@ -100,19 +100,21 @@ can be added to by giving the option again for each value.
 
 See L<Getopt::Long> for more information.
 
-Groups of options can be read from a file or files designated by the @
-character preceding the name.  For example:
-
-    hypertoc --gen_anchors @gen_anch_options  myfile.html
-
-See L</Options Files> for more information.
-
 =head2 Common Options
 
 The following arguments apply to both generating anchors and generating
 table-of-contents phases.
 
 =over 4
+
+=item --argfile I<filename>
+
+The name of a file to read more options from.  This can be used more
+than once.  For example:
+
+--argfile your.args --argfile my.args
+
+See L</Options Files> for more information.
 
 =item --bak
 
@@ -378,7 +380,7 @@ then a HTML page footer will be output.
 =head2 Options Files
 
 Options can be given in files as well as on the command-line by
-flagging an option file with @I<filename> in the command-line.
+using the --argfile I<filename> option in the command-line.
 Also, the files ~/.hypertocrc and ./.hypertocrc are checked for options.
 
 The format is as follows:
@@ -397,6 +399,10 @@ For example:
     --toc_end H1=/H1
     --toc_end H2=/H2
     --toc_end H3=/H3
+
+Option files can be nested, by giving an --argfile I<filename>
+argument inside the option file, it will go and get that referred
+file as well.
 
 See L<Getopt::ArgvFile> for more information.
 
@@ -647,9 +653,9 @@ Given an options file called 'custom.opt' as follows:
 then the previous example can have shorter command lines as follows:
 
     hypertoc --quiet --gen_anchors --bak "" --overwrite \
-    @custom.opt mary.html fred.html george.html
+    --argfile custom.opt mary.html fred.html george.html
 
-    hypertoc --quiet --gen_toc @custom.opt --toc_file index.html \
+    hypertoc --quiet --gen_toc --argfile custom.opt --toc_file index.html \
     mary.html fred.html george.html
 
 =head1 NOTES
@@ -661,6 +667,7 @@ then the previous example can have shorter command lines as follows:
 hypertoc is smart enough to detect anchors inside significant
 elements. If the anchor defines the NAME attribute, hypertoc uses
 the value. Else, it adds its own NAME attribute to the anchor.
+If --use_id is true, then it likewise checks for and uses IDs.
 
 =item *
 
@@ -853,8 +860,9 @@ Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 
 #################################################################
 # Includes
-use Getopt::Long;
+use Getopt::Long 2.34;
 use Pod::Usage;
+use Getopt::ArgvFile justload=>1;
 use HTML::GenToc;
 
 #################################################################
@@ -882,13 +890,12 @@ sub process_args ($) {
 
     my $ok = 1;
 
-    # check the rc file if we can
-    if (eval("require Getopt::ArgvFile")) {
-	Getopt::ArgvFile::argvFile(
+    # check the rc file
+    Getopt::ArgvFile::argvFile(
 	    startupFilename=>'.hypertocrc',
+	    fileOption=>'argfile',
 	    home=>1,
 	    current=>1);
-    }
     $ok = GetOptions($args_ref,
 	'help',
 	'manpage|man_help',

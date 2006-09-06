@@ -4,8 +4,8 @@ my $build = Module::Build->new(
     dist_version_from	=> 'scripts/hypertoc',
     requires		=> {
     		'HTML::SimpleParse' => 0.10,
-		'Getopt::Long' => 0,
-		'Getopt::ArgvFile' => 0,
+		'Getopt::Long' => 2.34,
+		'Getopt::ArgvFile' => 1.09,
 		'Pod::Usage' => 0,
 		'Data::Dumper' => 0,
     	},

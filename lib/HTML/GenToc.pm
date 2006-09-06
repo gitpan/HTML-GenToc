@@ -8,12 +8,12 @@ HTML::GenToc - Generate a Table of Contents for HTML documents.
 
 =head1 VERSION
 
-This describes version B<2.30> of HTML::GenToc.
+This describes version B<2.31> of HTML::GenToc.
 
 =cut
 
 use vars qw($VERSION);
-$VERSION = '2.30';
+$VERSION = '2.31';
 
 =head1 SYNOPSIS
 
@@ -1977,8 +1977,6 @@ The following map file tries to index definition terms:
     DT:3:DD:<EM>,</EM>    # Assumes document has a DD for each DT, otherwise ToC
                        # will get entries with alot of text.
 
-=head1 DETAILS
-
 =head2 Formatting the ToC
 
 The B<toc_entry> and other related options give you control on how the
@@ -2097,6 +2095,7 @@ already contain these tags/elements.
 HTML::GenToc is smart enough to detect anchors inside significant
 elements. If the anchor defines the NAME attribute, HTML::GenToc uses
 the value. Else, it adds its own NAME attribute to the anchor.
+If B<use_id> is true, then it likewise checks for and uses IDs.
 
 =item *
 

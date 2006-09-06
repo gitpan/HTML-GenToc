@@ -1,0 +1,7 @@
+# test arguments
+--gen_anchors
+--quiet
+--infile tfiles/test1.wml
+--gen_toc
+--outfile ''
+--toc_file test1b_toc.html

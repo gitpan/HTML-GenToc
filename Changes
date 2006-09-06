@@ -1,6 +1,18 @@
 Revision history for HTML::GenToc
 =================================
 
+2.31 Wed 06 September 2006
+--------------------------
+
+  * (22 Apr 2006) tweak docs
+  	Removed duplicate header, is all.
+
+  * (25 Oct 2004) documentation tweak
+
+  * (24 Oct 2004) argfile option
+  	Using Getopt::ArgvFile 1.09, now use --argfile as an option
+  to get Options Files, instead of having to use the @ prefix.
+
 2.30 Fri 22 October 2004
 ------------------------
 

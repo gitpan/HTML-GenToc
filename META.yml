@@ -1,14 +1,16 @@
---- #YAML:1.0
+---
 name: HTML-GenToc
-version: 2.30
+version: 2.31
 author:
   - Kathryn Andersen
 abstract: generate a table of contents for HTML documents
 license: gpl
+resources:
+  license: http://www.opensource.org/licenses/gpl-license.php
 requires:
   Data::Dumper: 0
-  Getopt::ArgvFile: 0
-  Getopt::Long: 0
+  Getopt::ArgvFile: 1.09
+  Getopt::Long: 2.34
   HTML::SimpleParse: 0.1
   Pod::Usage: 0
 build_requires:
@@ -16,5 +18,8 @@ build_requires:
 provides:
   HTML::GenToc:
     file: lib/HTML/GenToc.pm
-    version: 2.30
-generated_by: Module::Build version 0.26
+    version: 2.31
+generated_by: Module::Build version 0.28
+meta-spec:
+  url: http://module-build.sourceforge.net/META-spec-v1.2.html
+  version: 1.2
