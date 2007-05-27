@@ -1,13 +1,10 @@
 TODO list for HTML::GenToc
 ==========================
     HTML::GenToc
-  9. completely rewrite to build lists of lists, and use HTML::LinkList
-    Added:21/02/06, 16:18  Priority: high
-
- 10. enable user to define different list styles for OL on different levels
-    Added:22/09/04, 07:39  Priority: medium
-
- 11. make toc_end optional, defaulting to / + toc_entry key
+ 12. make toc_end optional, defaulting to / + toc_entry key
     Added:23/09/04, 07:01  Priority: medium
+
+ 13. figure out some way of *replacing* an inline ToC
+    Added:27/05/07, 14:31  Priority: medium
 
 

@@ -6,7 +6,7 @@ HTML::GenToc - Generate a Table of Contents for HTML documents.
 
 ==== VERSION ====
 
-This describes version ``2.31'' of HTML::GenToc.
+This describes version ``3.00'' of HTML::GenToc.
 
 
 ==== DESCRIPTION ====
@@ -29,10 +29,10 @@ manner.
 ==== REQUIRES ====
 
 The installation of this module requires ``Module::Build''. The module
-depends on ``HTML::SimpleParse'' and uses ``Data::Dumper'' for debugging
-purposes. The hypertoc script depends on ``Getopt::Long'',
-``Getopt::ArgvFile'' and ``Pod::Usage''. Testing of this distribution
-depends on ``Test::More''.
+depends on ``HTML::SimpleParse'' and ``HTML::LinkList'' and uses
+``Data::Dumper'' for debugging purposes. The hypertoc script depends on
+``Getopt::Long'', ``Getopt::ArgvFile'' and ``Pod::Usage''. Testing of this
+distribution depends on ``Test::More''.
 
 
 ==== INSTALLATION ====
@@ -76,7 +76,7 @@ the PERL5LIB variable to add /home/fred/perl/lib
 
 ==== AUTHOR ====
 
-Kathryn Andersen (RUBYKAT) http://www.katspace.com
+Kathryn Andersen (RUBYKAT) http://www.katspace.org/tools/hypertoc/
 
 Based on htmltoc by Earl Hood ehood AT medusa.acs.uci.edu
 
@@ -84,7 +84,7 @@ Based on htmltoc by Earl Hood ehood AT medusa.acs.uci.edu
 ==== COPYRIGHT ====
 
 Copyright (C) 1994-1997 Earl Hood, ehood AT medusa.acs.uci.edu Copyright (C)
-2002-2004 Kathryn Andersen
+2002-2007 Kathryn Andersen
 
 This program is free software; you can redistribute it and/or modify it
 under the terms of the GNU General Public License as published by the Free

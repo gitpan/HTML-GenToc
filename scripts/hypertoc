@@ -8,12 +8,12 @@ hypertoc - generate a table of contents for HTML documents
 
 =head1 VERSION
 
-This describes version B<2.31> of hypertoc.
+This describes version B<3.00> of hypertoc.
 
 =cut
 
 use vars qw($VERSION);
-$VERSION = '2.31';
+$VERSION = '3.00';
 
 =head1 SYNOPSIS
 
@@ -25,21 +25,21 @@ hypertoc [I<common options>] --gen_toc [I<gen_toc options>] file ...
 
 where I<common options> are:
 
-[--bak I<string> ] [ --debug ] { --infile I<file> }
+[--bak I<string> ] [ --debug ]
     [ --notoc_match I<string> ] [ --overwrite ] [ --quiet ]
     { --toc_end I<tag=endtag> } { --toc_entry I<tag=level> }
-    [ --tocmap I<file> ]
+    [ --outfile I<file> ]
 
 and I<gen_anchors options> are:
 
-[ --outfile I<file> ] [ --use_id ] [ --useorg ]
+[ --use_id ] [ --useorg ]
 
 and I<gen_toc options> are:
 
 [ --entrysep I<string> ] [ --footer I<file> ] [ --header I<file> ]
     [ --inline ] [ --textonly ] [ --title I<string> ]
     { --toc_after I<tag=suffix> } { --toc_before I<tag=prefix> }
-    [ --toc_file I<file> ] [ --toc_label I<string> ] [ --toc_tag I<string> ]
+    [ --toc_label I<string> ] [ --toc_tag I<string> ]
     [ --toc_tag_replace ] [ --toc_only | --notoc_only ]
     [ --toclabel I<string> ] [ --ol | --nool ] [ --ol_num_levels ]
 
@@ -62,22 +62,7 @@ they appear in a second level list in the ToC.
 There are two phases to the ToC generation.  The first phase
 (--gen_anchors) is to put suitable anchors into the HTML documents, and the
 second phase (--gen_toc) is to generate the ToC from HTML documents which
-have anchors in them for the ToC to link to.  Depending on what options are
-chosen, it may or may not make sense to apply both phases in the same
-command.
-
-B<Example:>
-
-    hypertoc --gen_anchors --gen_toc --overwrite --inline index.html
-
-is the equivalent of
-
-    hypertoc --gen_anchors --overwrite index.html;
-    hypertoc --gen_toc --inline --overwrite index.html
-
-If you want more control over how your ToC is created, it may be better
-to do both phases separately, as the interaction of overwriting and not
-overwriting may give you incorrect results.
+have anchors in them for the ToC to link to. 
 
 hypertoc also supports the ability to incorporate the ToC into the HTML
 document itself via the --inline option.
@@ -105,7 +90,7 @@ See L<Getopt::Long> for more information.
 The following arguments apply to both generating anchors and generating
 table-of-contents phases.
 
-=over 4
+=over
 
 =item --argfile I<filename>
 
@@ -135,15 +120,6 @@ in other words, don't bother.
 
 Print a short help message and exit.
 
-=item --infile
-
---infile I<file>
-
-Input file.  This is a cumulative list argument.  If you want to process
-more than one file, just add another --infile I<file> to the list of
-arguments.
-(default:undefined)
-
 =item --man_help | --manpage | --man
 
 Print all documentation and exit.
@@ -158,10 +134,18 @@ then if this pattern matches contents inside the tag (not the body),
 then that tag will not be included, either in generating anchors nor in
 generating the ToC.  (default: class="notoc")
 
+=item --outfile
+
+--outfile I<file>
+
+File to write the output to.  This is where the modified HTML output and
+the Table-of-Contents goes to.  If you give '-' as the filename, then
+output will go to STDOUT.  (default: STDOUT)
+
 =item --overwrite
 
 Overwrite the input file with the output.  If this is in effect, --outfile
-and --toc_file are ignored. Used in I<generate_anchors> for creating the
+is ignored. Used in I<generate_anchors> for creating the
 anchors "in place" and in I<generate_toc> if the --inline option is in
 effect.  (default:off)
 
@@ -196,19 +180,6 @@ be separated by the value set by --entrysep option.
 This is a cumulative hash argument.
 (default: H1=1  H2=2)
 
-=item --tocmap
-
---tocmap I<file>
-
-ToC map file defining significant elements.  This is deprecated, and is
-only here for backwards compatibility with htmltoc.
-
-It is not advisable to use this option at the same time as the --toc_entry,
---toc_end, --toc_before or --toc_after options, as it is not clear which
-one would override the other.
-
-See L</HTML::GenToc/ToC Map File> for further information.
-
 =back
 
 =head2 Generate Anchors Options
@@ -216,28 +187,18 @@ See L</HTML::GenToc/ToC Map File> for further information.
 These arguments apply only to generating anchors, but see above for
 common arguments.
 
-=over 4
-
-=item --outfile
-
---outfile I<file>
-
-File to write the output to.  This is where the modified be-anchored HTML
-output goes to.  Note that it doesn't make sense to use this option if you
-are processing more than one file.  If you give '-' as the filename, then
-output will go to STDOUT.
-(default: STDOUT)
+=over
 
 =item --use_id
 
-Use ID="I<name>" for anchors rather than <A NAME="I<name>"> anchors.
+Use id="I<name>" for anchors rather than <a name="I<name>"> anchors.
 However if an anchor already exists for a Significant Element, this
 won't make an ID for that particular element.
 
 =item --useorg
 
 Use pre-existing backup files as the input source; that is, files of the
-form I<infile>.I<bak>  (see --infile and --bak).
+form I<filename>.I<bak>  (see --bak).
 
 =back
 
@@ -246,7 +207,7 @@ form I<infile>.I<bak>  (see --infile and --bak).
 These arguments apply only to generating a table-of-contents, but see
 above for common arguments.
 
-=over 4
+=over
 
 =item --entrysep
 
@@ -322,19 +283,12 @@ what is required to be prepended to the Table of Contents entry
 generated for that tag.  This is a cumulative hash argument.  (default:
 undefined)
 
-=item --toc_file
-
---toc_file I<file> 
-
-File to write the table-of-contents output to.  If you give '-' as the
-filename, then output will go to STDOUT.  (default: STDOUT)
-
 =item --toc_label
 
 --toc_label I<string>
 
 HTML text that labels the ToC.  Always used.
-(default: "<H1>Table of Contents</H1>")
+(default: "<h1>Table of Contents</h1>")
 
 =item --toc_tag
 
@@ -433,17 +387,17 @@ Or, if it was defined in one of the possible L</Options Files>:
 The following options make use of the before/after options:
 
     # An options file that adds some formatting
-    # make level 1 ToC entries <STRONG>
+    # make level 1 ToC entries <strong>
     --toc_entry H1=1
     --toc_end H1=/H1
-    --toc_before H1=<STRONG>
-    --toc_after H1=</STRONG>
+    --toc_before H1=<strong>
+    --toc_after H1=</strong>
 
-    # make level 2 ToC entries <EM>
+    # make level 2 ToC entries <em>
     --toc_entry H2=2
     --toc_end H2=/H2
-    --toc_before H2=<EM>
-    --toc_after H2=</EM>
+    --toc_before H2=<em>
+    --toc_after H2=</em>
    
     # Make level 3 entries as is
     --toc_entry H3=3
@@ -463,8 +417,8 @@ The following options try to index definition terms:
     # will get entries with alot of text.
     --toc_entry DT=3
     --toc_end DT=DD
-    --toc_before DT=<EM>
-    --toc_after DT=</EM>
+    --toc_before DT=<em>
+    --toc_after DT=</em>
 
 =head2 Formatting the ToC
 
@@ -476,7 +430,7 @@ With the --header option, the contents of the given file will be prepended
 before the generated ToC. This allows you to have introductory text,
 or any other text, before the ToC.
 
-=over 4
+=over
 
 =item Note:
 
@@ -496,7 +450,7 @@ prepended before the generated ToC (but after any text taken from a
 With the --footer option, the contents of the file will be appended
 after the generated ToC.
 
-=over 4
+=over
 
 =item Note:
 
@@ -533,7 +487,7 @@ and will only be done if that file contains an opening tag matching the
 If --overwrite is true, then the first file in the list will be
 overwritten, with the generated ToC inserted at the appropriate spot.
 Otherwise a modified version of the first file is output to either STDOUT
-or to the output file defined by the --toc_file option.
+or to the output file defined by the --outfile option.
 
 The options --toc_tag and --toc_tag_replace are used to determine where
 and how the ToC is inserted into the output.
@@ -564,7 +518,7 @@ This will put the generated ToC after the first comment of the form
     --footer)
 followed by the rest of the input file.
 
-=over 4
+=over
 
 =item Note:
 
@@ -593,7 +547,7 @@ First, create the anchors.
 
 Then create the ToC
 
-    hypertoc --gen_toc --toc_file table.html
+    hypertoc --gen_toc --outfile table.html index.html fred.html george.html
 
 =head2 Create an inline ToC after the first heading of the first file
 
@@ -619,26 +573,19 @@ and H3 headers as level 2.  This can be useful where the .html file
 is generated by some other process, and you can then create the ToC as
 the last step.
 
-=head2 Create a ToC in two passes with custom elements
+=head2 Create a ToC with custom elements
 
     hypertoc --quiet --gen_anchors --bak "" --overwrite \
     --toc_entry TITLE=1 --toc_end TITLE=/TITLE
     --toc_entry H2=2 --toc_entry H3=3 \
-    --toc_end H2=/H2 --toc_end H3=/H3 mary.html fred.html george.html
-
-    hypertoc --quiet --gen_toc
-    --toc_entry TITLE=1 --toc_end TITLE=/TITLE
-    --toc_entry H2=2 --toc_entry H3=3 \
     --toc_end H2=/H2 --toc_end H3=/H3 \
-    --toc_file index.html mary.html fred.html george.html
+    --gen_toc --outfile index.html \
+    mary.html fred.html george.html
 
-The first call creates anchors at the H2 and H3 elements, and the second
-call creates a ToC file called index.html, indexing on the TITLE, and
-the H2 and H3 elements.  Note that the --toc_entry and --toc_end options
-have to be repeated for both calls; it could be useful to make an
-options file for this.
+This creates anchors at the H2 and H3 elements, and creates a ToC file called
+index.html, indexing on the TITLE, and the H2 and H3 elements.
 
-=head2 Create a ToC in two passes with custom elements and options file
+=head2 Create a ToC with custom elements and options file
 
 Given an options file called 'custom.opt' as follows:
 
@@ -653,14 +600,11 @@ Given an options file called 'custom.opt' as follows:
 then the previous example can have shorter command lines as follows:
 
     hypertoc --quiet --gen_anchors --bak "" --overwrite \
-    --argfile custom.opt mary.html fred.html george.html
-
-    hypertoc --quiet --gen_toc --argfile custom.opt --toc_file index.html \
-    mary.html fred.html george.html
+    --argfile custom.opt --gen_toc --outfile index.html mary.html fred.html george.html
 
 =head1 NOTES
 
-=over 4
+=over
 
 =item *
 
@@ -671,8 +615,8 @@ If --use_id is true, then it likewise checks for and uses IDs.
 
 =item *
 
-The TITLE element is treated specially if specified in the ToC map
-file. It is illegal to insert anchors (A) into TITLE elements.
+The TITLE element is treated specially if specified as a significant element.
+It is illegal to insert anchors (A) into TITLE elements.
 Therefore, hypertoc will actually link to the filename itself
 instead of the TITLE element of the document.
 
@@ -723,59 +667,58 @@ one sets the ToC to be included after a given tag (such as the default
 BODY) then if one runs the command repeatedly one could get multiple
 ToCs in the same file, one after the other.
 
-=item *
-
-If using hypertoc as part of a pipe, remember that both the
---gen_anchors and --gen_toc phases default to sending output to STDOUT,
-so if you try to do them both in the same pass, you need to explicitly
-disable one of them by setting --outfile or --toc_file to ''.
-
 =back
 
 =head1 CAVEATS
 
-=over 4
+=over
 
 =item *
 
-Version 2.00 (and above) of hypertoc behaves slightly differently in
-regard to default values for hash options than did the earlier (1.x)
-versions.  In the 1.x versions, all user options for things like
---toc_entry, --toc_end, --toc_before and --toc_after were I<added> to
-the default values; the default values had to be explicitly CLEARed.
-Now, if any value is given for these options, the default value is
-I<replaced> for that option.
+Version 3.00 (and above) of hypertoc behaves somewhat differently
+than Version 2.x of hypertoc.  It is now designed to do everything
+in one pass, and has dropped certain options: the --infile option
+is no longer used (all filenames are put at the end of the command);
+the --toc_file option no longer exists; use the --outfile option
+instead; the --tocmap option is no longer supported.
+
+It now generates lower-case tags rather than upper-case ones.
 
 =item *
 
 hypertoc is not very efficient (memory and speed), and can be
-extremely slow for large documents.
+slow for large documents.
 
 =item *
 
-Improvements have been made in dealing with using --gen_anchors
-and --gen_toc in the same command, but as a consequence, more memory is
-used than was the case before.
+Now that generation of anchors and of the ToC are done in one pass,
+even more memory is used than was the case before.  This is more notable
+when processing multiple files, since all files are read into memory
+before processing them.
 
 =item *
 
 Invalid markup will be generated if a significant element is
 contained inside of an anchor. For example:
 
-    <A NAME="foo"><H1>The FOO command</H1></A>
+    <a name="foo"><h1>The FOO command</h1></a>
 
-will be converted to (if H1 is a significant element),
+will be converted to (if h1 is a significant element),
 
-    <A NAME="foo"><H1><A NAME="The">The</A> FOO command</H1></A>
+    <a name="foo"><h1><a name="The">The</a> FOO command</h1></a>
 
 which is illegal since anchors cannot be nested.
 
 It is better style to put anchor statements within the element to
 be anchored. For example, the following is preferred:
 
-    <H1><A NAME="foo">The FOO command</A></H1>
+    <h1><a name="foo">The FOO command</a></h1>
 
 hypertoc will detect the "foo" NAME and use it.
+
+Even better is to use IDs:
+
+    <h1 id="foo">The FOO command</h1>
 
 =item *
 
@@ -792,6 +735,7 @@ Tell me about them.
     Getopt::Long
     Getopt::ArgvFile
     Pod::Usage
+    HTML::LinkList
     HTML::GenToc
 
 =head1 SCRIPT CATEGORIES
@@ -800,7 +744,7 @@ Web
 
 =head1 ENVIRONMENT
 
-=over 4
+=over
 
 =item HOME
 
@@ -810,7 +754,7 @@ hypertoc looks in the HOME directory for config files.
 
 =head1 FILES
 
-=over 4
+=over
 
 =item C<~/.hypertocrc>
 
@@ -827,20 +771,21 @@ options in C<~/.hypertocrc> and is overridden by command-line options.
 
 perl(1)
 htmltoc(1)
+HTML::LinkList
 HTML::GenToc
 Getopt::ArgvFile
 Getopt::Long
 
 =head1 AUTHOR
 
-Kathryn Andersen      http://www.katspace.com
-based on htmltoc by
-Earl Hood       ehood AT medusa.acs.uci.edu
+Kathryn Andersen      http://www.katspace.org/tools/hypertoc/
+
+Based on htmltoc by Earl Hood       ehood AT medusa.acs.uci.edu
 
 =head1 COPYRIGHT
 
 Copyright (C) 1994-1997  Earl Hood, ehood AT medusa.acs.uci.edu
-Copyright (C) 2002-2004 Kathryn Andersen
+Copyright (C) 2002-2007 Kathryn Andersen
 
 This program is free software; you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -877,9 +822,6 @@ sub init_data ($) {
     $args{version} = 0;
     $args{quiet} = 0;
     $args{help} = 0;
-    $args{gen_anchors} = 0;
-    $args{gen_toc} = 0;
-    $args{infile} = [];
 
     $data_ref->{args} = \%args;
 }
@@ -907,17 +849,15 @@ sub process_args ($) {
 	'footer=s',
 	'inline!',
 	'header=s',
-	'infile|file=s@',
 	'notoc_match=s',
 	'ol|ordered_list!',
 	'ol_num_levels=n',
 	'overwrite!',
-	'outfile=s',
 	'textonly!',
 	'title=s',
 	'toclabel|toc_label=s',
 	'tocmap=s',
-	'toc_file|tocfile=s',
+	'outfile|toc_file|tocfile=s',
 	'toc_tag|toctag=s',
 	'toc_tag_replace!',
 	'toc_only!',
@@ -927,8 +867,8 @@ sub process_args ($) {
 	'toc_after=s%',
 	'use_id!',
 	'useorg!',
-	'gen_toc|generate_toc',
-	'gen_anchors|generate_anchors',
+	'make_toc|gen_toc|generate_toc',
+	'make_anchors|gen_anchors|generate_anchors',
     );
     if (!$ok)
     {
@@ -958,10 +898,10 @@ sub process_args ($) {
 	    });
     }
     # transfer script-only things to the data-ref
-    $data_ref->{gen_anchors} = $args_ref->{gen_anchors};
-    undef $args_ref->{gen_anchors};
-    $data_ref->{gen_toc} = $args_ref->{gen_toc};
-    undef $args_ref->{gen_toc};
+    $data_ref->{make_anchors} = $args_ref->{make_anchors};
+    undef $args_ref->{make_anchors};
+    $data_ref->{make_toc} = $args_ref->{make_toc};
+    undef $args_ref->{make_toc};
     undef $args_ref->{help};
     undef $args_ref->{manpage};
     undef $args_ref->{version};
@@ -980,52 +920,25 @@ MAIN: {
     process_args(\%data);
 
     # Now the remainder must be input-files
-    # Need to get the current infile array, just in case
-    # the user used the --infile option earlier.
-    # Push the infiles onto the infile array,
-    # and reset the infile argument.
-    my @infiles = @{$data{toc}->setting('infile')};
-    foreach my $df (@ARGV)
+    my @infiles = ();
+    push @infiles, @ARGV;
+    if (!$data{toc}->{quiet})
     {
-	if ($data{toc}->setting('debug')) {
-	    print STDERR "--infile $df\n";
-	}
-	push @infiles, $df;
+	print STDERR "To process: ", join(" ", @infiles), "\n";
     }
-    $data{toc}->args(infile=>\@infiles);
-
-    if ($data{gen_anchors} && $data{gen_toc})
+    $result = $data{toc}->generate_toc(
+	make_anchors=>$data{make_anchors},
+	make_toc=>$data{make_toc},
+	input=>\@infiles,
+	);
+    if ($result)
     {
-	if ($data{toc}->setting('debug')) {
-	    print STDERR "doing gen_anchors and gen_toc\n";
-	}
-	if (!$data{toc}->generate_anchors(set_file_strings=>1)) {
-	    $result = 1;
-	}
-	elsif (!$data{toc}->generate_toc()) {
-	    $result = 1;
-	}
+	exit 0;
     }
-    elsif ($data{gen_anchors}) {
-	if ($data{toc}->setting('debug')) {
-	    print STDERR "doing gen_anchors\n";
-	}
-	if (!$data{toc}->generate_anchors()) {
-	    $result = 1;
-	}
+    else
+    {
+	exit 1;
     }
-    elsif ($data{gen_toc}) {
-	if ($data{toc}->setting('debug')) {
-	    print STDERR "doing gen_toc\n";
-	}
-	if (!$data{toc}->generate_toc()) {
-	    $result = 1;
-	}
-    }
-    if ($data{toc}->setting('debug')) {
-	print STDERR "result is $result\n";
-    }
-    exit $result;
 }
 
 # vim: sw=4 sts=4 ai

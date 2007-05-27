@@ -1,6 +1,14 @@
 Revision history for HTML::GenToc
 =================================
 
+3.00 Sun 27 May 2007
+--------------------
+
+  * (27 May 2007) refactor
+  	Massive rewrite; now everything is done in one pass with
+  one generate_toc method, and it uses HTML::LinkList to generate
+  the actual Table-of-Contents list.
+
 2.31 Wed 06 September 2006
 --------------------------
 

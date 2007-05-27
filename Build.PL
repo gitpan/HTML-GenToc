@@ -1,8 +1,10 @@
+require 5.8.1;
 use Module::Build;
 my $build = Module::Build->new(
     module_name	=> 'HTML::GenToc',
     dist_version_from	=> 'scripts/hypertoc',
     requires		=> {
+    		'HTML::LinkList' => 0.1501,
     		'HTML::SimpleParse' => 0.10,
 		'Getopt::Long' => 2.34,
 		'Getopt::ArgvFile' => 1.09,
@@ -17,10 +19,7 @@ my $build = Module::Build->new(
     license		=> 'gpl',
 );
 $build->create_build_script;
-# create the Makefile.PL if need be
-if (! -f 'Makefile.PL')
-{
-    use Module::Build::Compat;
-    print "creating Makefile.PL\n";
-    Module::Build::Compat->create_makefile_pl('passthrough', $build);
-}
+# create the Makefile.PL always
+use Module::Build::Compat;
+print "creating Makefile.PL\n";
+Module::Build::Compat->create_makefile_pl('passthrough', $build);

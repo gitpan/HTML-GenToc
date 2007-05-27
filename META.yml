@@ -1,6 +1,6 @@
 ---
 name: HTML-GenToc
-version: 2.31
+version: 3.00
 author:
   - Kathryn Andersen
 abstract: generate a table of contents for HTML documents
@@ -11,6 +11,7 @@ requires:
   Data::Dumper: 0
   Getopt::ArgvFile: 1.09
   Getopt::Long: 2.34
+  HTML::LinkList: 0.1501
   HTML::SimpleParse: 0.1
   Pod::Usage: 0
 build_requires:
@@ -18,8 +19,8 @@ build_requires:
 provides:
   HTML::GenToc:
     file: lib/HTML/GenToc.pm
-    version: 2.31
-generated_by: Module::Build version 0.28
+    version: 3.00
+generated_by: Module::Build version 0.2805
 meta-spec:
   url: http://module-build.sourceforge.net/META-spec-v1.2.html
   version: 1.2
