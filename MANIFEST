@@ -26,6 +26,7 @@ tfiles/good_test5_toc.html
 tfiles/good_test5b_toc.html
 tfiles/good_test6_toc.html
 tfiles/good_test6a_toc.html
+tfiles/good_test7a.html
 tfiles/test1.wml
 tfiles/test1b.args
 tfiles/test2.html
@@ -33,11 +34,13 @@ tfiles/test3.wml
 tfiles/test4.html
 tfiles/test5.php
 tfiles/test6.html
+tfiles/test7.html
 scripts/hypertoc
 t/000_dist.t
 t/001_load.t
 t/010_files.t
 t/020_strings.t
+t/030_anchors.t
 t/070_script.t
 t/pod-coverage.t
 t/pod.t

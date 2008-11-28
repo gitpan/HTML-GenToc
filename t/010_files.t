@@ -1,4 +1,4 @@
-use Test::More tests => 34;
+use Test::More tests => 36;
 use HTML::GenToc;
 require 't/compare.pl';
 
@@ -457,5 +457,36 @@ if ($result) {
     unlink('test2a_anch.html');
     unlink('test2a_anch.html.org');
 }
+
+#
+# file test7 (this file already has some anchors)
+# testing generation of anchors
+#
+$result = $toc->generate_toc(
+	make_anchors=>1,
+	use_id=>1,
+	make_toc=>0,
+	input=>['tfiles/test7.html'],
+	overwrite=>0,
+	bak=>'',
+	outfile=>'test7a.html',
+	toc_entry=>{ 'H1'=>1,
+		'H2'=>2,
+		},
+	toc_end=>{ 'H1'=>'/H1',
+		'H2'=>'/H2',
+		}
+	);
+ok($result, 'generated anchors from test7.html');
+
+# compare the files
+$result = compare('test7a.html', 'tfiles/good_test7a.html');
+ok($result, 'test7a.html matches tfiles/good_test7a.html exactly');
+
+# clean up
+if ($result) {
+    unlink('test7a.html');
+}
+
 
 # vim: ft=perl
