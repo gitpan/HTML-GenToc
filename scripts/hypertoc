@@ -7,24 +7,21 @@ hypertoc - generate a table of contents for HTML documents
 
 =head1 VERSION
 
-This describes version B<3.10> of hypertoc.
-
-=cut
-
-use vars qw($VERSION);
-$VERSION = '3.10';
+version 3.20
 
 =head1 SYNOPSIS
 
 hypertoc --help | --manpage | --man_help | --man
 
-hypertoc [--bak I<string> ] [ --debug ] [ --entrysep I<string> ] [ --footer I<file> ]
-[ --header I<file> ] [ --inline ] [ --make_anchors ] [ --make_toc ]
-[ --notoc_match I<string> ] [ --ol | --nool ] [ --ol_num_levels ] [ --outfile I<file> ]
-[ --overwrite ] [ --quiet ] [ --textonly ] [ --title I<string> ]
-{ --toc_after I<tag=suffix> } { --toc_before I<tag=prefix> }
-{ --toc_end I<tag=endtag> } { --toc_entry I<tag=level> }
-[ --toc_label I<string> ] [ --toc_only | --notoc_only ] [ --toc_tag I<string> ]
+hypertoc [--bak I<string> ] [ --debug ] [ --entrysep I<string> ]
+[ --footer I<file> ] [ --header I<file> ] [ --ignore_only_one ]
+[ --ignore_sole_first ] [ --inline ] [ --make_anchors ] [ --make_toc ]
+[ --notoc_match I<string> ] [ --ol | --nool ] [ --ol_num_levels ]
+[ --outfile I<file> ] [ --overwrite ] [ --quiet ] [ --textonly ]
+[ --title I<string> ] { --toc_after I<tag=suffix> }
+{ --toc_before I<tag=prefix> } { --toc_end I<tag=endtag> }
+{ --toc_entry I<tag=level> } [ --toc_label I<string> ]
+[ --toc_only | --notoc_only ] [ --toc_tag I<string> ]
 [ --toc_tag_replace ] [ --use_id ] [ --useorg ] file ...
 
 =head1 DESCRIPTION
@@ -115,6 +112,17 @@ File containing header text for table of contents.
 =item --help
 
 Print a short help message and exit.
+
+=item --ignore_only_one
+
+If there would be only one item in the ToC, don't make a ToC.
+
+=item --ignore_sole_first
+
+If the first item in the ToC is of the highest level,
+AND it is the only one of that level, ignore it.
+This is useful in web-pages where there is only one H1 header
+but one doesn't know beforehand whether there will be only one.
 
 =item --inline
 
@@ -701,6 +709,7 @@ Tell me about them.
 
     Getopt::Long
     Getopt::ArgvFile
+    File::Basename
     Pod::Usage
     HTML::LinkList
     HTML::Entities
@@ -776,7 +785,7 @@ Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 # Includes
 use Getopt::Long 2.34;
 use Pod::Usage;
-use Getopt::ArgvFile justload=>1;
+use File::Basename;
 use HTML::GenToc;
 
 #################################################################
@@ -788,9 +797,7 @@ sub init_data ($) {
     my %args = ();
     $args{manpage} = 0;
     $args{debug} = 0;
-    $args{version} = 0;
     $args{quiet} = 0;
-    $args{help} = 0;
 
     $data_ref->{args} = \%args;
 }
@@ -801,21 +808,29 @@ sub process_args ($) {
 
     my $ok = 1;
 
-    # check the rc file
-    Getopt::ArgvFile::argvFile(
-	    startupFilename=>'.hypertocrc',
-	    fileOption=>'argfile',
-	    home=>1,
-	    current=>1);
-    $ok = GetOptions($args_ref,
-	'help',
+    # check the rc file if we can
+    if (eval("require Getopt::ArgvFile")) {
+	my $nameBuilder=sub
+	{
+	    my $bn = basename($_[0], '');
+	    [".${bn}rc", ".${bn}/config", ".config/${bn}/config"];
+	};
+	Getopt::ArgvFile::argvFile(
+				   startupFilename=>$nameBuilder,
+				   fileOption=>'argfile',
+				   home=>1,
+				   current=>1);
+    }
+    my $op = new Getopt::Long::Parser;
+    $op->configure(qw(auto_version auto_help));
+    $op->getoptions($args_ref,
 	'manpage|man_help',
 	'debug',
-	'version',
 	'quiet!',
 	'bak=s',
 	'entrysep=s',
 	'footer=s',
+	'ignore_sole_first!',
 	'inline!',
 	'header=s',
 	'notoc_match=s',
@@ -847,23 +862,11 @@ sub process_args ($) {
 	    });
     }
 
-    if ($args_ref->{'version'})
-    {
-	print STDERR "$0 version: $VERSION\n";
-	exit 0;
-    }
     if ($args_ref->{'manpage'})
     {
-	pod2usage({ -message => "$0 version $VERSION",
+	pod2usage({ -message => "$0",
 		    -exitval => 0,
 		    -verbose => 2,
-	    });
-    }
-    if ($args_ref->{'help'})
-    {
-	pod2usage({ -message => "$0 version $VERSION",
-		    -exitval => 0,
-		    -verbose => 1,
 	    });
     }
     # transfer script-only things to the data-ref
@@ -871,9 +874,7 @@ sub process_args ($) {
     undef $args_ref->{make_anchors};
     $data_ref->{make_toc} = $args_ref->{make_toc};
     undef $args_ref->{make_toc};
-    undef $args_ref->{help};
     undef $args_ref->{manpage};
-    undef $args_ref->{version};
     # make the object
     my $toc = HTML::GenToc->new(%{$args_ref});
     $data_ref->{toc} = $toc;
